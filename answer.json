@@ -1,0 +1,2476 @@
+{
+    "disputeFilters": {
+        "COMMON_CASE_RESULT": [
+            {
+                "name": "Гражданские дела и споры с органами власти",
+                "field": 193,
+                "base": "ARB",
+                "div": "ARB",
+                "filters": [
+                    {
+                        "parent": "40000",
+                        "value": "40001",
+                        "id": 6,
+                        "name": "Исковые требования удовлетворены полностью",
+                        "hide": false,
+                        "addSearch": true
+                    },
+                    {
+                        "parent": "40000",
+                        "value": "40002",
+                        "id": 7,
+                        "name": "Исковые требования удовлетворены частично",
+                        "hide": false,
+                        "addSearch": true
+                    },
+                    {
+                        "parent": "40000",
+                        "value": "40003",
+                        "id": 8,
+                        "name": "В удовлетворении исковых требований отказано",
+                        "hide": false,
+                        "addSearch": true
+                    },
+                    {
+                        "parent": "40000",
+                        "value": "40004",
+                        "id": 9,
+                        "name": "Производство прекращено",
+                        "hide": false,
+                        "addSearch": true
+                    },
+                    {
+                        "parent": "40000",
+                        "value": "40005",
+                        "id": 10,
+                        "name": "Дело направлено на новое рассмотрение",
+                        "hide": false,
+                        "addSearch": true
+                    },
+                    {
+                        "parent": "40000",
+                        "value": "40006",
+                        "id": 11,
+                        "name": "Решение нижестоящего суда отменено или изменено",
+                        "hide": false,
+                        "addSearch": true
+                    }
+                ]
+            },
+            {
+                "name": "Дела об административных правонарушениях",
+                "field": 193,
+                "base": "ARB",
+                "div": "ARB",
+                "filters": [
+                    {
+                        "parent": "40007",
+                        "value": "40008",
+                        "id": 12,
+                        "name": "Лицо привлечено к административной ответственности",
+                        "hide": false,
+                        "addSearch": true
+                    },
+                    {
+                        "parent": "40007",
+                        "value": "40009",
+                        "id": 13,
+                        "name": "В привлечении к административной ответственности отказано",
+                        "hide": false,
+                        "addSearch": true
+                    },
+                    {
+                        "parent": "40007",
+                        "value": "40010",
+                        "id": 14,
+                        "name": "Административное наказание изменено или деяние переквалифицировано",
+                        "hide": false,
+                        "addSearch": true
+                    },
+                    {
+                        "parent": "40007",
+                        "value": "40011",
+                        "id": 15,
+                        "name": "Производство прекращено",
+                        "hide": false,
+                        "addSearch": true
+                    },
+                    {
+                        "parent": "40007",
+                        "value": "40012",
+                        "id": 16,
+                        "name": "Дело направлено на новое рассмотрение",
+                        "hide": false,
+                        "addSearch": true
+                    },
+                    {
+                        "parent": "40007",
+                        "value": "40013",
+                        "id": 17,
+                        "name": "Решение нижестоящего суда отменено или изменено",
+                        "hide": false,
+                        "addSearch": true
+                    }
+                ]
+            }
+        ],
+        "COMMON_TEM_KKT": [
+            {
+                "name": "Споры по налогам, сборам и страховым взносам",
+                "field": 196,
+                "base": "ARB",
+                "div": "ARB",
+                "filters": [
+                    {
+                        "value": "52654",
+                        "id": 2,
+                        "name": "Оставить только споры этой тематики",
+                        "hide": false,
+                        "addSearch": false,
+                        "stats": {
+                            "rubrics": [
+                                13170
+                            ]
+                        }
+                    },
+                    {
+                        "value": "52654",
+                        "id": 3,
+                        "name": "Скрыть споры этой тематики",
+                        "hide": true,
+                        "addSearch": false,
+                        "stats": {
+                            "rubrics": [
+                                13170
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                "name": "Споры, связанные с банкротством",
+                "field": 196,
+                "base": "ARB",
+                "div": "ARB",
+                "filters": [
+                    {
+                        "value": "53738",
+                        "id": 4,
+                        "name": "Оставить только споры этой тематики",
+                        "hide": false,
+                        "addSearch": false
+                    },
+                    {
+                        "value": "53738",
+                        "id": 5,
+                        "name": "Скрыть споры этой тематики",
+                        "hide": true,
+                        "addSearch": false
+                    }
+                ]
+            }
+        ]
+    },
+    "treepane": {
+        "treeIndex": 0,
+        "name": "root",
+        "base": "",
+        "ndoc": 2501436,
+        "total": 2501436,
+        "stats": {
+            "statUID": "32913"
+        },
+        "nodes": [
+            {
+                "treeUID": "IiIiMiwxLExBVyIiIg",
+                "treeIndex": 0,
+                "name": "Законодательство",
+                "div": "LAW",
+                "base": "",
+                "ndoc": 474015,
+                "total": 474015,
+                "canBeRevealed": true,
+                "stats": {
+                    "statUID": "1",
+                    "branch": "LAW"
+                },
+                "nodes": [
+                    {
+                        "treeUID": "IiIiMSwwLDMyOTEzIiIsIiIyLDEsTEFXIiIi",
+                        "treeIndex": 1,
+                        "name": "Российское законодательство (расширенная версия)",
+                        "selected": 1,
+                        "div": "LAW",
+                        "base": "RZR",
+                        "slice": "32913",
+                        "ndoc": 230727,
+                        "total": 230727,
+                        "canBeMonitored": true,
+                        "stats": {
+                            "statUID": "32913"
+                        }
+                    },
+                    {
+                        "treeUID": "IiIiMiwxMDEsUkVHTEFXIiIsIiIyLDEsTEFXIiIi",
+                        "treeIndex": 2,
+                        "name": "Региональное законодательство",
+                        "div": "LAW",
+                        "base": "",
+                        "ndoc": 243288,
+                        "total": 243288,
+                        "canBeRevealed": true,
+                        "collapsed": 1,
+                        "stats": {
+                            "statUID": "101",
+                            "branch": "REGLAW"
+                        },
+                        "nodes": [
+                            {
+                                "treeUID": "IiIiMSwxLDMyOTAyIiIsIiIyLDEwMSxSRUdMQVciIiwiIjIsMSxMQVciIiI",
+                                "treeIndex": 3,
+                                "name": "Москва (базовая версия)",
+                                "div": "LAW",
+                                "base": "MNV",
+                                "slice": "32902",
+                                "ndoc": 95178,
+                                "total": 95178,
+                                "canBeMonitored": true,
+                                "stats": {
+                                    "statUID": "32902"
+                                }
+                            },
+                            {
+                                "treeUID": "IiIiMSwxMiwzMjkwMyIiLCIiMiwxMDEsUkVHTEFXIiIsIiIyLDEsTEFXIiIi",
+                                "treeIndex": 4,
+                                "name": "Московская область (базовая версия)",
+                                "div": "LAW",
+                                "base": "MONV",
+                                "slice": "32903",
+                                "ndoc": 148110,
+                                "total": 148110,
+                                "canBeMonitored": true,
+                                "stats": {
+                                    "statUID": "32903"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "treeUID": "IiIiMiwxNCxBUCIiIg",
+                "treeIndex": 5,
+                "name": "Административная практика",
+                "div": "AP",
+                "base": "",
+                "isNew": "NEW",
+                "ndoc": 85369,
+                "total": 85369,
+                "canBeRevealed": true,
+                "collapsed": 1,
+                "stats": {
+                    "statUID": "14",
+                    "branch": "AP"
+                },
+                "nodes": [
+                    {
+                        "treeUID": "IiIiMSwzMjg3NCwzMjg3NCIiLCIiMiwxNCxBUCIiIg",
+                        "treeIndex": 6,
+                        "name": "Решения госорганов по спорным ситуациям",
+                        "div": "AP",
+                        "base": "RGSS",
+                        "slice": "32874",
+                        "ndoc": 85369,
+                        "total": 85369,
+                        "stats": {
+                            "statUID": "32874"
+                        }
+                    }
+                ]
+            },
+            {
+                "treeUID": "IiIiMiwyLEFSQiIiIg",
+                "treeIndex": 7,
+                "name": "Судебная практика",
+                "div": "ARB",
+                "base": "",
+                "ndoc": 1171616,
+                "total": 1171616,
+                "canBeRevealed": true,
+                "collapsed": 1,
+                "stats": {
+                    "statUID": "2",
+                    "branch": "ARB"
+                },
+                "nodes": [
+                    {
+                        "treeUID": "IiIiMiwyMTAsQU1TUCIiLCIiMiwyLEFSQiIiIg",
+                        "treeIndex": 8,
+                        "name": "Позиции судов и подборки практики",
+                        "div": "ARB",
+                        "base": "",
+                        "ndoc": 6852,
+                        "total": 6852,
+                        "canBeRevealed": true,
+                        "collapsed": 1,
+                        "stats": {
+                            "statUID": "210",
+                            "branch": "AMSP"
+                        },
+                        "nodes": [
+                            {
+                                "treeUID": "IiIiMSwzMjg3NSwzMjg3NSIiLCIiMiwyMTAsQU1TUCIiLCIiMiwyLEFSQiIiIg",
+                                "treeIndex": 9,
+                                "name": "Правовые позиции высших судов",
+                                "div": "ARB",
+                                "base": "PPVS",
+                                "slice": "32875",
+                                "ndoc": 4101,
+                                "total": 4101,
+                                "stats": {
+                                    "statUID": "32875"
+                                }
+                            },
+                            {
+                                "treeUID": "IiIiMiwyMTEsU1BVVCIiLCIiMiwyMTAsQU1TUCIiLCIiMiwyLEFSQiIiIg",
+                                "treeIndex": 10,
+                                "name": "Путеводители КонсультантПлюс",
+                                "div": "ARB",
+                                "base": "",
+                                "ndoc": 2751,
+                                "total": 2751,
+                                "canBeRevealed": true,
+                                "collapsed": 1,
+                                "united": 1,
+                                "stats": {
+                                    "statUID": "211",
+                                    "branch": "SPUT"
+                                },
+                                "nodes": [
+                                    {
+                                        "treeUID": "IiIiMSwzMjgxNSwzMjgxNSIiLCIiMiwyMTEsU1BVVCIiLCIiMiwyMTAsQU1TUCIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 11,
+                                        "name": "Путеводитель по судебной практике (ГК РФ)",
+                                        "div": "ARB",
+                                        "base": "PSP",
+                                        "slice": "32815",
+                                        "ndoc": 2085,
+                                        "total": 2085,
+                                        "stats": {
+                                            "statUID": "32815"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwzMjgxNiwzMjgxNiIiLCIiMiwyMTEsU1BVVCIiLCIiMiwyMTAsQU1TUCIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 12,
+                                        "name": "Путеводитель по корпоративным спорам",
+                                        "div": "ARB",
+                                        "base": "PKS",
+                                        "slice": "32816",
+                                        "ndoc": 248,
+                                        "total": 248,
+                                        "stats": {
+                                            "statUID": "32816"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwzMjg1MywzMjg1MyIiLCIiMiwyMTEsU1BVVCIiLCIiMiwyMTAsQU1TUCIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 13,
+                                        "name": "Путеводитель по трудовым спорам",
+                                        "div": "ARB",
+                                        "base": "PTS",
+                                        "slice": "32853",
+                                        "ndoc": 230,
+                                        "total": 230,
+                                        "stats": {
+                                            "statUID": "32853"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwzMjg1OSwzMjg1OSIiLCIiMiwyMTEsU1BVVCIiLCIiMiwyMTAsQU1TUCIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 14,
+                                        "name": "Путеводитель по спорам в сфере закупок",
+                                        "div": "ARB",
+                                        "base": "PSG",
+                                        "slice": "32859",
+                                        "ndoc": 188,
+                                        "total": 188,
+                                        "stats": {
+                                            "statUID": "32859"
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "treeUID": "IiIiMiwyMDMsQVJCQSIiLCIiMiwyLEFSQiIiIg",
+                        "treeIndex": 15,
+                        "name": "Решения высших судов",
+                        "div": "ARB",
+                        "base": "",
+                        "ndoc": 858864,
+                        "total": 858864,
+                        "canBeRevealed": true,
+                        "collapsed": 1,
+                        "united": 1,
+                        "visibleFilters": [
+                            2,
+                            3,
+                            4,
+                            5,
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17
+                        ],
+                        "stats": {
+                            "statUID": "203",
+                            "branch": "ARBA"
+                        },
+                        "nodes": [
+                            {
+                                "treeUID": "IiIiMSw0LEFSQjAwMSIiLCIiMiwyMDMsQVJCQSIiLCIiMiwyLEFSQiIiIg",
+                                "treeIndex": 16,
+                                "name": "Постановления пленумов и обзоры",
+                                "div": "ARB",
+                                "base": "ARB",
+                                "slice": "ARB001",
+                                "ndoc": 3001,
+                                "total": 3001,
+                                "visibleFilters": [
+                                    2,
+                                    3,
+                                    4,
+                                    5,
+                                    6,
+                                    7,
+                                    8,
+                                    9,
+                                    10,
+                                    11,
+                                    12,
+                                    13,
+                                    14,
+                                    15,
+                                    16,
+                                    17
+                                ],
+                                "stats": {
+                                    "statUID": "8"
+                                }
+                            },
+                            {
+                                "treeUID": "IiIiMSw0LEFSQjAwMiIiLCIiMiwyMDMsQVJCQSIiLCIiMiwyLEFSQiIiIg",
+                                "treeIndex": 17,
+                                "name": "Решения по конкретным делам",
+                                "div": "ARB",
+                                "base": "ARB",
+                                "slice": "ARB002",
+                                "ndoc": 855863,
+                                "total": 855863,
+                                "visibleFilters": [
+                                    2,
+                                    3,
+                                    4,
+                                    5,
+                                    6,
+                                    7,
+                                    8,
+                                    9,
+                                    10,
+                                    11,
+                                    12,
+                                    13,
+                                    14,
+                                    15,
+                                    16,
+                                    17
+                                ],
+                                "stats": {
+                                    "statUID": "8"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "treeUID": "IiIiMSwzMjg4MCwzMjg4MCIiLCIiMiwyLEFSQiIiIg",
+                        "treeIndex": 18,
+                        "name": "Суд по интеллектуальным правам",
+                        "div": "ARB",
+                        "base": "SIP",
+                        "slice": "32880",
+                        "ndoc": 150123,
+                        "total": 150123,
+                        "visibleFilters": [
+                            6,
+                            7,
+                            8,
+                            9,
+                            10,
+                            11,
+                            12,
+                            13,
+                            14,
+                            15,
+                            16,
+                            17
+                        ],
+                        "stats": {
+                            "statUID": "32880"
+                        }
+                    },
+                    {
+                        "treeUID": "IiIiMiwyMDAsQVMiIiwiIjIsMixBUkIiIiI",
+                        "treeIndex": 19,
+                        "name": "Арбитражные суды",
+                        "div": "ARB",
+                        "base": "",
+                        "ndoc": 155777,
+                        "total": 155777,
+                        "canBeRevealed": true,
+                        "collapsed": 1,
+                        "stats": {
+                            "statUID": "200",
+                            "branch": "AS"
+                        },
+                        "nodes": [
+                            {
+                                "treeUID": "IiIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                "treeIndex": 20,
+                                "name": "Арбитражные суды округов",
+                                "div": "ARB",
+                                "base": "",
+                                "ndoc": 155777,
+                                "total": 155777,
+                                "canBeRevealed": true,
+                                "collapsed": 1,
+                                "united": 1,
+                                "visibleFilters": [
+                                    2,
+                                    3,
+                                    4,
+                                    5,
+                                    6,
+                                    7,
+                                    8,
+                                    9,
+                                    10,
+                                    11,
+                                    12,
+                                    13,
+                                    14,
+                                    15,
+                                    16,
+                                    17
+                                ],
+                                "stats": {
+                                    "statUID": "201",
+                                    "branch": "FAS"
+                                },
+                                "nodes": [
+                                    {
+                                        "treeUID": "IiIiMSwyMiwzMjgwNSIiLCIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 21,
+                                        "name": "Арбитражный суд Волго-Вятского округа (бухгалтер)",
+                                        "div": "ARB",
+                                        "base": "BVV",
+                                        "slice": "32805",
+                                        "ndoc": 10774,
+                                        "total": 10774,
+                                        "visibleFilters": [
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17
+                                        ],
+                                        "stats": {
+                                            "statUID": "32805"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwyMywzMjgwNiIiLCIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 22,
+                                        "name": "Арбитражный суд Восточно-Сибирского округа (бухгалтер)",
+                                        "div": "ARB",
+                                        "base": "BVS",
+                                        "slice": "32806",
+                                        "ndoc": 11376,
+                                        "total": 11376,
+                                        "visibleFilters": [
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17
+                                        ],
+                                        "stats": {
+                                            "statUID": "32806"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwyNCwzMjgwNyIiLCIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 23,
+                                        "name": "Арбитражный суд Дальневосточного округа (бухгалтер)",
+                                        "div": "ARB",
+                                        "base": "BDV",
+                                        "slice": "32807",
+                                        "ndoc": 8317,
+                                        "total": 8317,
+                                        "visibleFilters": [
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17
+                                        ],
+                                        "stats": {
+                                            "statUID": "32807"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwyNSwzMjgwOCIiLCIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 24,
+                                        "name": "Арбитражный суд Западно-Сибирского округа (бухгалтер)",
+                                        "div": "ARB",
+                                        "base": "BZS",
+                                        "slice": "32808",
+                                        "ndoc": 16473,
+                                        "total": 16473,
+                                        "visibleFilters": [
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17
+                                        ],
+                                        "stats": {
+                                            "statUID": "32808"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwxOCwzMjgwNCIiLCIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 25,
+                                        "name": "Арбитражный суд Московского округа (бухгалтер)",
+                                        "div": "ARB",
+                                        "base": "BMS",
+                                        "slice": "32804",
+                                        "ndoc": 25641,
+                                        "total": 25641,
+                                        "visibleFilters": [
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17
+                                        ],
+                                        "stats": {
+                                            "statUID": "32804"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwyNiwzMjgwOSIiLCIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 26,
+                                        "name": "Арбитражный суд Поволжского округа (бухгалтер)",
+                                        "div": "ARB",
+                                        "base": "BPV",
+                                        "slice": "32809",
+                                        "ndoc": 15375,
+                                        "total": 15375,
+                                        "visibleFilters": [
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17
+                                        ],
+                                        "stats": {
+                                            "statUID": "32809"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwyNywzMjgxMCIiLCIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 27,
+                                        "name": "Арбитражный суд Северо-Западного округа (бухгалтер)",
+                                        "div": "ARB",
+                                        "base": "BSZ",
+                                        "slice": "32810",
+                                        "ndoc": 21358,
+                                        "total": 21358,
+                                        "visibleFilters": [
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17
+                                        ],
+                                        "stats": {
+                                            "statUID": "32810"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwyOCwzMjgxMSIiLCIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 28,
+                                        "name": "Арбитражный суд Северо-Кавказского округа (бухгалтер)",
+                                        "div": "ARB",
+                                        "base": "BSK",
+                                        "slice": "32811",
+                                        "ndoc": 18687,
+                                        "total": 18687,
+                                        "visibleFilters": [
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17
+                                        ],
+                                        "stats": {
+                                            "statUID": "32811"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwyOSwzMjgxMiIiLCIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 29,
+                                        "name": "Арбитражный суд Уральского округа (бухгалтер)",
+                                        "div": "ARB",
+                                        "base": "BUR",
+                                        "slice": "32812",
+                                        "ndoc": 18443,
+                                        "total": 18443,
+                                        "visibleFilters": [
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17
+                                        ],
+                                        "stats": {
+                                            "statUID": "32812"
+                                        }
+                                    },
+                                    {
+                                        "treeUID": "IiIiMSwzMCwzMjgxMyIiLCIiMiwyMDEsRkFTIiIsIiIyLDIwMCxBUyIiLCIiMiwyLEFSQiIiIg",
+                                        "treeIndex": 30,
+                                        "name": "Арбитражный суд Центрального округа (бухгалтер)",
+                                        "div": "ARB",
+                                        "base": "BCN",
+                                        "slice": "32813",
+                                        "ndoc": 9333,
+                                        "total": 9333,
+                                        "visibleFilters": [
+                                            2,
+                                            3,
+                                            4,
+                                            5,
+                                            6,
+                                            7,
+                                            8,
+                                            9,
+                                            10,
+                                            11,
+                                            12,
+                                            13,
+                                            14,
+                                            15,
+                                            16,
+                                            17
+                                        ],
+                                        "stats": {
+                                            "statUID": "32813"
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "treeUID": "IiIiMiwzLEZJTiIiIg",
+                "treeIndex": 31,
+                "name": "Финансовые и кадровые консультации",
+                "div": "FIN",
+                "base": "",
+                "ndoc": 584768,
+                "total": 584768,
+                "canBeRevealed": true,
+                "united": 1,
+                "stats": {
+                    "statUID": "3",
+                    "branch": "FIN"
+                },
+                "nodes": [
+                    {
+                        "treeUID": "IiIiMiwzMDEsRklOUFVUIiIsIiIyLDMsRklOIiIi",
+                        "treeIndex": 32,
+                        "name": "Путеводители КонсультантПлюс",
+                        "div": "FIN",
+                        "base": "",
+                        "ndoc": 1978,
+                        "total": 1978,
+                        "canBeRevealed": true,
+                        "collapsed": 1,
+                        "united": 1,
+                        "stats": {
+                            "statUID": "301",
+                            "branch": "FINPUT"
+                        },
+                        "nodes": [
+                            {
+                                "treeUID": "IiIiMSwzMjgwMCwzMjgwMCIiLCIiMiwzMDEsRklOUFVUIiIsIiIyLDMsRklOIiIi",
+                                "treeIndex": 33,
+                                "name": "Путеводитель по налогам",
+                                "div": "FIN",
+                                "base": "PPN",
+                                "slice": "32800",
+                                "ndoc": 1749,
+                                "total": 1749,
+                                "stats": {
+                                    "statUID": "32800"
+                                }
+                            },
+                            {
+                                "treeUID": "IiIiMSwzMjgxOCwzMjgxOCIiLCIiMiwzMDEsRklOUFVUIiIsIiIyLDMsRklOIiIi",
+                                "treeIndex": 34,
+                                "name": "Путеводитель по кадровым вопросам",
+                                "div": "FIN",
+                                "base": "PKV",
+                                "slice": "32818",
+                                "ndoc": 86,
+                                "total": 86,
+                                "stats": {
+                                    "statUID": "32818"
+                                }
+                            },
+                            {
+                                "treeUID": "IiIiMSwzMjgxNCwzMjgxNCIiLCIiMiwzMDEsRklOUFVUIiIsIiIyLDMsRklOIiIi",
+                                "treeIndex": 35,
+                                "name": "Путеводитель по сделкам",
+                                "div": "FIN",
+                                "base": "PPS",
+                                "slice": "32814",
+                                "ndoc": 143,
+                                "total": 143,
+                                "stats": {
+                                    "statUID": "32814"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "treeUID": "IiIiMSwyLFFTQTAwMSIiLCIiMiwzLEZJTiIiIg",
+                        "treeIndex": 36,
+                        "name": "Разъясняющие письма органов власти",
+                        "div": "FIN",
+                        "base": "QSA",
+                        "slice": "QSA001",
+                        "ndoc": 116711,
+                        "total": 116711,
+                        "stats": {
+                            "statUID": "4"
+                        }
+                    },
+                    {
+                        "treeUID": "IiIiMSwyLFFTQTAwMiIiLCIiMiwzLEZJTiIiIg",
+                        "treeIndex": 37,
+                        "name": "Вопросы-ответы",
+                        "div": "FIN",
+                        "base": "QSA",
+                        "slice": "QSA002",
+                        "ndoc": 92187,
+                        "total": 92187,
+                        "stats": {
+                            "statUID": "4"
+                        }
+                    },
+                    {
+                        "treeUID": "IiIiMSwzNywzMjc3NiIiLCIiMiwzLEZJTiIiIg",
+                        "treeIndex": 38,
+                        "name": "Бухгалтерская пресса и книги",
+                        "div": "FIN",
+                        "base": "PBI",
+                        "slice": "32776",
+                        "ndoc": 352733,
+                        "total": 352733,
+                        "stats": {
+                            "statUID": "32776"
+                        }
+                    },
+                    {
+                        "treeUID": "IiIiMSwzMiwzOSIiLCIiMiwzLEZJTiIiIg",
+                        "treeIndex": 39,
+                        "name": "Корреспонденция счетов",
+                        "div": "FIN",
+                        "base": "KOR",
+                        "slice": "39",
+                        "ndoc": 21159,
+                        "total": 21159,
+                        "stats": {
+                            "statUID": "39"
+                        }
+                    }
+                ]
+            },
+            {
+                "treeUID": "IiIiMiw0LENNVCIiIg",
+                "treeIndex": 40,
+                "name": "Комментарии законодательства",
+                "div": "CMT",
+                "base": "",
+                "ndoc": 166044,
+                "total": 166044,
+                "canBeRevealed": true,
+                "united": 1,
+                "stats": {
+                    "statUID": "4",
+                    "branch": "CMT"
+                },
+                "nodes": [
+                    {
+                        "treeUID": "IiIiMiw0MDEsQ01UUFVUIiIsIiIyLDQsQ01UIiIi",
+                        "treeIndex": 41,
+                        "name": "Путеводители КонсультантПлюс",
+                        "div": "CMT",
+                        "base": "",
+                        "ndoc": 119,
+                        "total": 119,
+                        "canBeRevealed": true,
+                        "collapsed": 1,
+                        "united": 1,
+                        "stats": {
+                            "statUID": "401",
+                            "branch": "CMTPUT"
+                        },
+                        "nodes": [
+                            {
+                                "treeUID": "IiIiMSwzMjgyNCwzMjgyNCIiLCIiMiw0MDEsQ01UUFVUIiIsIiIyLDQsQ01UIiIi",
+                                "treeIndex": 42,
+                                "name": "Путеводитель по договорной работе",
+                                "div": "CMT",
+                                "base": "PDR",
+                                "slice": "32824",
+                                "ndoc": 57,
+                                "total": 57,
+                                "stats": {
+                                    "statUID": "32824"
+                                }
+                            },
+                            {
+                                "treeUID": "IiIiMSwzMjgyNSwzMjgyNSIiLCIiMiw0MDEsQ01UUFVUIiIsIiIyLDQsQ01UIiIi",
+                                "treeIndex": 43,
+                                "name": "Путеводитель по корпоративным процедурам",
+                                "div": "CMT",
+                                "base": "PKP",
+                                "slice": "32825",
+                                "ndoc": 39,
+                                "total": 39,
+                                "stats": {
+                                    "statUID": "32825"
+                                }
+                            },
+                            {
+                                "treeUID": "IiIiMSwzMjgyNiwzMjgyNiIiLCIiMiw0MDEsQ01UUFVUIiIsIiIyLDQsQ01UIiIi",
+                                "treeIndex": 44,
+                                "name": "Путеводитель по госуслугам для юридических лиц",
+                                "div": "CMT",
+                                "base": "PGU",
+                                "slice": "32826",
+                                "ndoc": 19,
+                                "total": 19,
+                                "stats": {
+                                    "statUID": "32826"
+                                }
+                            },
+                            {
+                                "treeUID": "IiIiMSwzMjg3MywzMjg3MyIiLCIiMiw0MDEsQ01UUFVUIiIsIiIyLDQsQ01UIiIi",
+                                "treeIndex": 45,
+                                "name": "Путеводитель по контрактной системе в сфере закупок",
+                                "div": "CMT",
+                                "base": "PKG",
+                                "slice": "32873",
+                                "ndoc": 4,
+                                "total": 4,
+                                "stats": {
+                                    "statUID": "32873"
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        "treeUID": "IiIiMSwzMjc5OSwzMjc5OSIiLCIiMiw0LENNVCIiIg",
+                        "treeIndex": 46,
+                        "name": "Постатейные комментарии и книги",
+                        "div": "CMT",
+                        "base": "CMB",
+                        "slice": "32799",
+                        "ndoc": 4669,
+                        "total": 4669,
+                        "stats": {
+                            "statUID": "32799"
+                        }
+                    },
+                    {
+                        "treeUID": "IiIiMSwzMjc5OCwzMjc5OCIiLCIiMiw0LENNVCIiIg",
+                        "treeIndex": 47,
+                        "name": "Юридическая пресса",
+                        "div": "CMT",
+                        "base": "CJI",
+                        "slice": "32798",
+                        "ndoc": 161256,
+                        "total": 161256,
+                        "stats": {
+                            "statUID": "32798"
+                        }
+                    }
+                ]
+            },
+            {
+                "treeUID": "IiIiMiw1LFBBUCIiIg",
+                "treeIndex": 48,
+                "name": "Формы документов",
+                "div": "PAP",
+                "base": "",
+                "ndoc": 19624,
+                "total": 19624,
+                "canBeRevealed": true,
+                "collapsed": 1,
+                "stats": {
+                    "statUID": "5",
+                    "branch": "PAP"
+                },
+                "nodes": [
+                    {
+                        "treeUID": "IiIiMSwzLDMyODcwIiIsIiIyLDUsUEFQIiIi",
+                        "treeIndex": 49,
+                        "name": "Дополнительные формы",
+                        "div": "PAP",
+                        "base": "DOF",
+                        "slice": "32870",
+                        "ndoc": 19624,
+                        "total": 19624,
+                        "stats": {
+                            "statUID": "32870"
+                        }
+                    }
+                ]
+            }
+        ]
+    },
+    "list": {
+        "listpanes": [
+            {
+                "items": [
+                    {
+                        "order": 0,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 411198,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Перечень антикризисных мер\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 1,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 348585,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Перечень мер в связи с коронавирусом (COVID-19)\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 2,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 516759,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Взносы на травматизм: Минтруд утвердил порядок подтверждения вида деятельности подразделений\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 3,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 516756,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Охрана труда: интересные ответы онлайн-инспекции за август - сентябрь 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 4,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 475214,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"КонсультантПлюс: Новости для специалиста по нормативно-техническим актам\"</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 5,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 308021,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"КонсультантПлюс: Новости для специалиста организации здравоохранения\"</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 6,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 207705,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"КонсультантПлюс: Новости для специалиста по кадрам\"</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 7,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 204700,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"КонсультантПлюс: Новости для бухгалтера бюджетной организации\"</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 8,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 179583,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"КонсультантПлюс: Новости для бухгалтера\"</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 9,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 179581,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"КонсультантПлюс: Новости для специалиста по закупкам\"</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 10,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 179580,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"КонсультантПлюс: Новости для юриста\"</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 11,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 36589,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"КонсультантПлюс: Новое в российском законодательстве с 11 по 17 октября 2025 года\"</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 12,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 516634,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Налоги, взносы и отчетность в ноябре 2025 года: основные изменения\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 13,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 516586,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Какие схемы ухода от налогов увидели суды за 2024 - 2025 годы\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 14,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 516268,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Обзор ВС РФ N 3 (2025): на какие позиции обратить внимание\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 15,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 63774,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Справочная информация:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Генеральная прокуратура РФ и прокуратуры субъектов РФ\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(Материал подготовлен специалистами КонсультантПлюс)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 16,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 11916,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"КонсультантПлюс: Новое в российском законодательстве с 21 июля по 11 октября 2025 года\"</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 17,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 65443,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Справочная информация:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Федеральные органы исполнительной власти РФ\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(Материал подготовлен специалистами КонсультантПлюс)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 18,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 131633,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Государственный реестр лекарственных средств\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(по состоянию на 03.10.2025) (Часть 2)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 19,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 119873,
+                        "title": [
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Государственный реестр лекарственных средств\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(по состоянию на 03.10.2025) (Часть 1)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 20,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 60969,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Справочная информация:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Федеральная налоговая служба, межрегиональные инспекции и управления ФНС России по субъектам РФ\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(Материал подготовлен специалистами КонсультантПлюс)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 21,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 515707,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Топ-3 \"поворотных\" дел кассации по трудовым спорам за июль - август 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 22,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 515652,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Повышение ставки НДС до 22%, пересмотр порога доходов по УСН и другое: обзор проекта N 1026190-8\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 23,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 40789,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Справочная информация:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Курсы иностранных валют, установленные Центральным банком Российской Федерации в октябре 2025 года\"</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 24,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 515447,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Односторонний отказ заказчика от госконтракта: интересные примеры из практики за 2024 - 2025 годы\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 25,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 515269,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Какие важные изменения ждут юриста в октябре 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 26,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 56552,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Справочная информация:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Верховный Суд Российской Федерации и Федеральные суды общей юрисдикции\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(Материал подготовлен специалистами КонсультантПлюс)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 27,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 515063,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"О каких изменениях законодательства нужно знать гражданам в IV квартале 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 28,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 512766,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Планы счетов бюджетного и бухгалтерского учета: инструкции по применению уже на регистрации\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 29,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 514876,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Сокращение госслужащих: интересная практика 2024 - 2025 годов\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 30,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 514862,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Пропуск срока подписания договора по Закону N 223-ФЗ: примеры из практики за 2024 - 2025 годы\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 31,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 514788,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Указание товарного знака при закупках по Закону N 44-ФЗ: ФАС разъяснила спорные вопросы\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 32,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 514783,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Доводы против необоснованности налоговой выгоды: интересная практика за 2025 год\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 33,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 514775,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Топ-3 \"поворотных\" дел арбитражных судов округов для юриста: август 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 34,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 514647,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Налоги и взносы в октябре 2025 года: основные изменения\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 35,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 514622,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Работодателям на заметку: полезные ответы онлайн-инспекции за август 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 36,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 514607,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"ФСБУ 9/2025 \"Доходы\": Минфин перечислил основные новшества\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 37,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 514313,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Справочная информация:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Правовой календарь на IV квартал 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(Материал подготовлен специалистами КонсультантПлюс)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 38,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 514051,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Топ-3 \"поворотных\" дел ВС РФ по налогам за I полугодие 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 39,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 513761,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Споры о командировках: интересные примеры из практики за 2024 - 2025 годы\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 40,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 513687,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Национальный режим: изменены правила подтверждения страны товаров и особенности их описания\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 41,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 513263,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Услуги связи, денежные переводы, недвижимость, криптовалюта и прочее: Минцифры подготовило изменения\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 42,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 513073,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Работодателям на заметку: полезные ответы онлайн-инспекции за июль 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 43,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 512964,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Ошибки в требованиях к участникам госзакупок: примеры из практики за 2024 - 2025 годы\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 44,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 512957,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Зарплата и премии за счет ОМС: интересная практика конца 2024 года - начала 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 45,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 512900,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Необоснованная госпитализация по ОМС: интересная судебная практика за 2023 - 2025 годы\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 46,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 512652,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Топ-3 \"поворотных\" дел арбитражных судов округов для юриста: июль 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 47,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 512553,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Какие изменения учесть юристу с 1 сентября 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 48,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 512543,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Реклама в интернете: правительство утвердило правила расчета и уплаты сбора с 15 августа 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    },
+                    {
+                        "order": 49,
+                        "base": "LAW",
+                        "canBeMonitored": 1,
+                        "icon": 1,
+                        "nd": 512542,
+                        "title": [
+                            {
+                                "class": "T",
+                                "html": "<span class=\"blk\">Обзор:</span>"
+                            },
+                            {
+                                "class": "TH",
+                                "html": "<span class=\"blk\">\"Охрана труда: интересные ответы онлайн-инспекции за июнь - июль 2025 года\"</span>"
+                            },
+                            {
+                                "class": "TR",
+                                "html": "<span class=\"blk\">(КонсультантПлюс, 2025)</span>"
+                            }
+                        ],
+                        "extraTitle": []
+                    }
+                ]
+            }
+        ],
+        "base": "RZR",
+        "n": 230727,
+        "refineFields": {
+            "base": [
+                {
+                    "base": "RZR",
+                    "num": 134,
+                    "pseudo": "COMMON_TEXT",
+                    "t": "Текст документа",
+                    "type": "text",
+                    "isTxtFld": 1
+                },
+                {
+                    "base": "RZR",
+                    "num": 9,
+                    "pseudo": "COMMON_DOCNAME",
+                    "t": "Название документа",
+                    "type": "text"
+                },
+                {
+                    "base": "RZR",
+                    "num": 7,
+                    "pseudo": "COMMON_NUMBER",
+                    "t": "Номер",
+                    "hasFilter": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 6,
+                    "pseudo": "COMMON_DATE",
+                    "t": "Дата",
+                    "useCode": 1,
+                    "type": "date"
+                },
+                {
+                    "base": "RZR",
+                    "num": 84,
+                    "pseudo": "COMMON_ORGAN",
+                    "t": "Принявший орган",
+                    "hasFilter": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 5,
+                    "pseudo": "COMMON_VID_DOC",
+                    "t": "Вид документа",
+                    "hasFilter": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 73,
+                    "pseudo": "COMMON_RUBRICS",
+                    "t": "Тематика",
+                    "hasFilter": 1,
+                    "useCode": 1,
+                    "type": "rubric"
+                },
+                {
+                    "base": "RZR",
+                    "num": 56,
+                    "pseudo": "COMMON_STATUS",
+                    "t": "Поиск по статусу",
+                    "useCode": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 110,
+                    "pseudo": "COMMON_RECEIVE",
+                    "t": "Когда получен",
+                    "useCode": 1,
+                    "type": "date"
+                }
+            ],
+            "division": [
+                {
+                    "base": "RZR",
+                    "num": 134,
+                    "pseudo": "COMMON_TEXT",
+                    "t": "Текст документа",
+                    "type": "text",
+                    "isTxtFld": 1
+                },
+                {
+                    "base": "RZR",
+                    "num": 9,
+                    "pseudo": "COMMON_DOCNAME",
+                    "t": "Название документа",
+                    "type": "text"
+                },
+                {
+                    "base": "RZR",
+                    "num": 7,
+                    "pseudo": "COMMON_NUMBER",
+                    "t": "Номер",
+                    "hasFilter": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 6,
+                    "pseudo": "COMMON_DATE",
+                    "t": "Дата",
+                    "useCode": 1,
+                    "type": "date"
+                },
+                {
+                    "base": "RZR",
+                    "num": 84,
+                    "pseudo": "COMMON_ORGAN",
+                    "t": "Принявший орган",
+                    "hasFilter": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 5,
+                    "pseudo": "COMMON_VID_DOC",
+                    "t": "Вид документа",
+                    "hasFilter": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 73,
+                    "pseudo": "COMMON_RUBRICS",
+                    "t": "Тематика",
+                    "hasFilter": 1,
+                    "useCode": 1,
+                    "type": "rubric"
+                },
+                {
+                    "base": "RZR",
+                    "num": 56,
+                    "pseudo": "COMMON_STATUS",
+                    "t": "Поиск по статусу",
+                    "useCode": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 110,
+                    "pseudo": "COMMON_RECEIVE",
+                    "t": "Когда получен",
+                    "useCode": 1,
+                    "type": "date"
+                }
+            ],
+            "allDivisions": [
+                {
+                    "base": "RZR",
+                    "num": 134,
+                    "pseudo": "COMMON_TEXT",
+                    "t": "Текст документа",
+                    "type": "text",
+                    "isTxtFld": 1
+                },
+                {
+                    "base": "RZR",
+                    "num": 9,
+                    "pseudo": "COMMON_DOCNAME",
+                    "t": "Название документа",
+                    "type": "text"
+                },
+                {
+                    "base": "RZR",
+                    "num": 7,
+                    "pseudo": "COMMON_NUMBER",
+                    "t": "Номер",
+                    "hasFilter": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 6,
+                    "pseudo": "COMMON_DATE",
+                    "t": "Дата",
+                    "useCode": 1,
+                    "type": "date"
+                },
+                {
+                    "base": "RZR",
+                    "num": 84,
+                    "pseudo": "COMMON_ORGAN",
+                    "t": "Принявший орган",
+                    "hasFilter": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 5,
+                    "pseudo": "COMMON_VID_DOC",
+                    "t": "Вид документа",
+                    "hasFilter": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 73,
+                    "pseudo": "COMMON_RUBRICS",
+                    "t": "Тематика",
+                    "hasFilter": 1,
+                    "useCode": 1,
+                    "type": "rubric"
+                },
+                {
+                    "base": "RZR",
+                    "num": 56,
+                    "pseudo": "COMMON_STATUS",
+                    "t": "Поиск по статусу",
+                    "useCode": 1,
+                    "type": "string"
+                },
+                {
+                    "base": "RZR",
+                    "num": 110,
+                    "pseudo": "COMMON_RECEIVE",
+                    "t": "Когда получен",
+                    "useCode": 1,
+                    "type": "date"
+                }
+            ]
+        },
+        "sortlist": {
+            "current": 0,
+            "defst": 0,
+            "sorts": [
+                {
+                    "index": 0,
+                    "name": "Комплексная",
+                    "title": "С учётом юридической силы и даты документа"
+                },
+                {
+                    "index": 1,
+                    "name": "По дате изменения",
+                    "title": "По дате изменения документа"
+                },
+                {
+                    "index": 2,
+                    "name": "По дате принятия",
+                    "title": "По дате принятия документа"
+                }
+            ]
+        },
+        "exportableFields": [
+            {
+                "num": 9,
+                "pseudo": "COMMON_DOCNAME",
+                "t": "Название документа"
+            },
+            {
+                "num": 10,
+                "pseudo": "LAW_IST",
+                "t": "Источник публикации"
+            },
+            {
+                "num": 3,
+                "pseudo": "COMMON_PRIM_DOC",
+                "t": "Примечание к документу"
+            },
+            {
+                "num": 134,
+                "pseudo": "COMMON_TEXT",
+                "t": "Текст документа"
+            }
+        ]
+    },
+    "query": {
+        "icon": "card",
+        "caption": "Поиск: Условия поиска не заданы",
+        "breadcrumb": "Все документы|Поиск",
+        "name": "Результаты поиска",
+        "refines": []
+    },
+    "histid": "7902885",
+    "cacheid": "2F0224C944C329FEAD332958AA1E5921",
+    "mode": "searchcard",
+    "listId": -1106477709
+}
+
+../cgi/online.cgi?req=doc&cacheid=2F0224C944C329FEAD332958AA1E5921&mode=searchcard&base=LAW&n=348585&BASENODE=IiIiMSwwLDMyOTEzIiIsIiIyLDEsTEFXIiIi&rnd=6f00eg
+../cgi/online.cgi?req=doc&cacheid=2F0224C944C329FEAD332958AA1E5921&mode=searchcard&base=LAW&n=411198&BASENODE=IiIiMSwwLDMyOTEzIiIsIiIyLDEsTEFXIiIi&rnd=6f00eg
+../cgi/online.cgi?req=doc&cacheid=2F0224C944C329FEAD332958AA1E5921&mode=searchcard&base=LAW&n=60969&BASENODE=IiIiMSwwLDMyOTEzIiIsIiIyLDEsTEFXIiIi&rnd=6f00eg
+https://www.consultant.ru/regbase/cgi/online.cgi?req=query&cacheid=350C1F7F063142E52C5AEB5AD3E08168&NOQUERYLOG=1&sb=IiIiMSwxOSwyNSIiLCIiMiwxMDMsU1pGTyIiLCIiMiwxMDEsUkVHTEFXIiIsIiIyLDEsTEFXIiIi&rnd=0yF0yzUyAYh1r3aT1#WSg0yzUq0ky06WeT1

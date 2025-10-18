@@ -1,0 +1,13 @@
+{
+	"req": "query",
+	"content": "tree",
+	"BASENODE": "IiIiMSwwLDMyOTEzIiIsIiIyLDEsTEFXIiIi",
+	"mode": "searchcard",
+	"cacheid": "2F0224C944C329FEAD332958AA1E5921",
+	"histid": "7902885",
+	"showall": "0",
+	"position": "1",
+	"NOQUERYLOG": "1",
+	"rnd": "6f00eg",
+	"statistics": "{\"envelopes\":[{\"command\":{\"type\":\"tLocalMenuList\",\"action\":\"aIdmOpencurnewwin\",\"list\":{\"id\":-1106477709},\"secsFromStart\":96,\"tab\":1},\"timestamp\":1760771617933},{\"activeList\":{\"listId\":-1106477709,\"secsFromStart\":96,\"action\":\"aCloseWindow\"},\"timestamp\":1760771618299},{\"statDoc\":{\"type\":\"tDocOpenIm\",\"document\":{\"base\":\"UlpS\",\"number\":348585,\"edition\":\"etD\"},\"docOpenIm\":{\"label\":{\"value\":100002},\"listStat\":{\"docPar\":2,\"firstScreen\":false,\"listId\":{\"id\":-1106477709}},\"docRenderMsecs\":10136,\"secsFromStart\":103}},\"timestamp\":1760771625167},{\"statDoc\":{\"type\":\"tActiveDoc\",\"document\":{\"base\":\"TEFX\",\"number\":348585,\"edition\":\"etD\"},\"activeDoc\":{\"secsFromStart\":103,\"active\":true}},\"timestamp\":1760771625171},{\"activeList\":{\"listId\":-1106477709,\"secsFromStart\":171,\"action\":\"aOpenWindow\"},\"timestamp\":1760771693116},{\"statDoc\":{\"type\":\"tActiveDoc\",\"document\":{\"base\":\"TEFX\",\"number\":348585,\"edition\":\"etD\"},\"activeDoc\":{\"secsFromStart\":171,\"active\":false}},\"timestamp\":1760771693174},{\"activeStartPage\":{\"secsFromStart\":189,\"isActive\":false},\"timestamp\":1760771710775},{\"activeStartPage\":{\"secsFromStart\":315,\"isActive\":false},\"timestamp\":1760771836765},{\"window\":{\"type\":\"tClose\",\"frame\":256738436,\"secsFromStart\":189},\"timestamp\":1760771710972}],\"timestamp\":1760771838690}"
+}
