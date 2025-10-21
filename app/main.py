@@ -36,19 +36,26 @@ async def worker_parser_data(
 
 
 async def worker_parser_pdf():
+    await setup_database()
+
     all_legislation = await sql_get_legislation_by_not_binary_pdf()
+    batch_size = 1000
 
-    parser = ParserPDF()
-    contents_binary = await parser.async_run(
-        list_legislation=list(all_legislation[:100])
-    )
+    for batch_sart in range(0, len(all_legislation), batch_size):
+        config.logger.info(f"Берем партию {batch_size} для запросов {batch_sart}/{len(all_legislation)}")
 
-    for i, publication_number in enumerate(contents_binary):
-        config.logger.info(f"Обновляем данные в таблице. Итерация: {i + 1}/{len(contents_binary)}")
-        await sql_update_binary_pdf(
-            publication_number=publication_number,
-            content=contents_binary[publication_number]
+        batch_end = batch_sart + batch_size
+        parser = ParserPDF()
+        contents_binary = await parser.async_run(
+            list_legislation=list(all_legislation[batch_sart:batch_end])
         )
+
+        for i, publication_number in enumerate(contents_binary):
+            config.logger.info(f"Обновляем данные в таблице. Итерация: {i + 1}/{len(contents_binary)}")
+            await sql_update_binary_pdf(
+                publication_number=publication_number,
+                content=contents_binary[publication_number]
+            )
 
 
 def main(
