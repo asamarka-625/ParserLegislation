@@ -1,0 +1,193 @@
+# Внешние зависимости
+from typing import Optional, List, Dict
+import asyncio
+import pytesseract
+from PIL import Image
+from pdf2image import convert_from_bytes
+from fake_useragent import UserAgent
+import httpx
+# Внутренние модули
+from app.config import get_config
+from app.models import DataLegislation
+
+
+config = get_config()
+
+
+class ParserPDF:
+    def __init__(self):
+        self.url_base = f"http://publication.pravo.gov.ru/file/pdf?eoNumber="
+        self.ua = UserAgent()
+        self.headers = {
+            "Accept": "text / html, application / xhtml + xml, application / xml;q = 0.9, * / *;q = 0.8",
+            "Accept-Language": "ru-RU,ru;q=0.8,en-US;q=0.5,en;q=0.3",
+            "Host": "publication.pravo.gov.ru",
+            "Referer": "http://publication.pravo.gov.ru/documents/monthly",
+            "User-Agent": self.ua.random
+        }
+        # Настройка для русского языка
+        self.tessdata_dir_config = '--tessdata-dir "/usr/share/tesseract-ocr/4.00/tessdata"'
+
+    async def get_async_response(
+            self,
+            url: str,
+            publication_number: str,
+            client: httpx.AsyncClient
+    ) -> bytes:
+        config.logger.info(f"Делаем запрос на: {url}")
+        try:
+            response = await client.get(url, headers=self.headers)
+            response.raise_for_status()
+            pdf_content = response.content
+
+            config.logger.info(f"PDF ({publication_number}) успешно скачан, размер: {len(pdf_content)} байт")
+            return pdf_content
+
+        except httpx.ReadTimeout:
+            config.logger.error(f"ReadTimeout для {url}")
+            raise
+
+        except httpx.ConnectTimeout:
+            config.logger.error(f"ConnectTimeout для {url}")
+            raise
+
+        except httpx.HTTPStatusError as err:
+            config.logger.error(f"HTTPError {err.response.status_code} для {url}")
+            raise
+
+        except Exception as err:
+            config.logger.error(f"Неожиданная ошибка для {url}: {type(err).__name__}: {err}")
+            raise
+
+    async def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
+        try:
+
+            ocr_text = await self._extract_text_with_ocr_from_bytes(pdf_bytes)
+            final_text = ocr_text
+
+            return final_text
+
+        except Exception as e:
+            config.logger.error(f"Ошибка при извлечении текста: {e}")
+            return None, "error"
+
+    async def _extract_text_with_ocr_from_bytes(self, pdf_bytes: bytes) -> str:
+        """Извлечение текста с помощью OCR из PDF байтов"""
+        try:
+            config.logger.info("Конвертация PDF в изображения...")
+
+            # Конвертируем PDF байты в изображения
+            images = convert_from_bytes(
+                pdf_bytes,
+                dpi=300,
+                fmt='JPEG'
+            )
+
+            all_text = ""
+
+            for i, image in enumerate(images):
+                config.logger.info(f"Обработка страницы {i + 1}/{len(images)}...")
+
+                # Обрабатываем изображение асинхронно
+                page_text = await self._process_image_async(image, i)
+                all_text += page_text
+
+            return all_text
+
+        except Exception as e:
+            config.logger.error(f"Ошибка OCR: {e}")
+            return ""
+
+    async def _process_image_async(self, image: Image.Image, page_num: int) -> str:
+        """Асинхронная обработка одного изображения"""
+        # Выполняем CPU-intensive задачи в thread pool
+        loop = asyncio.get_event_loop()
+
+        # Предобработка изображения
+        processed_image = await loop.run_in_executor(
+            None, self._preprocess_image, image
+        )
+
+        # OCR распознавание
+        page_text = await loop.run_in_executor(
+            None,
+            self._perform_ocr,
+            processed_image,
+            page_num
+        )
+
+        return page_text
+
+    @staticmethod
+    def _preprocess_image(image: Image.Image) -> Image.Image:
+        """Предобработка изображения для улучшения распознавания"""
+        # Конвертируем в grayscale если нужно
+        if image.mode != 'L':
+            image = image.convert('L')
+
+        return image
+
+    @staticmethod
+    def _perform_ocr(image: Image.Image, page_num: int) -> str:
+        """Выполнение OCR распознавания"""
+        try:
+            page_text = pytesseract.image_to_string(
+                image,
+                lang='rus+eng',
+                config='--psm 6 -c preserve_interword_spaces=1'
+            )
+
+            return page_text
+
+        except Exception as e:
+            config.logger.error(f"Ошибка OCR на странице {page_num + 1}: {e}")
+            return ""
+
+    async def async_run(
+            self,
+            list_legislation: List[DataLegislation]
+    ) -> Dict[str, bytes]:
+        # Создаем клиент для каждой пачки
+        timeout = httpx.Timeout(
+            connect=30.0,  # Таймаут на подключение
+            read=30.0,  # Таймаут на чтение
+            write=30.0,  # Таймаут на запрос
+            pool=100.0  # Таймаут на получение из пула
+        )
+        limits = httpx.Limits(max_connections=200, max_keepalive_connections=100)
+        batch_size = 45
+        results = {}
+
+        for batch_start in range(0, len(list_legislation), batch_size):
+            batch_end = batch_start + batch_size
+
+            async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
+                tasks = []
+                for legislation in list_legislation[batch_start:batch_end]:
+                    task = self.get_async_response(
+                        url=f"{self.url_base}{legislation.publication_number}",
+                        publication_number=legislation.publication_number,
+                        client=client
+                    )
+                    tasks.append(task)
+
+                batch_contents = await asyncio.gather(*tasks, return_exceptions=True)
+
+                # Обрабатываем результаты пачки
+                for legislation, content in zip(list_legislation[batch_start:batch_end], batch_contents):
+                    if isinstance(content, Exception) or not content:
+                        config.logger.error(
+                            f"Не удалась загрузить PDF файл (publication_number: {legislation.publication_number})"
+                        )
+                        continue
+
+                    results[legislation.publication_number] = content
+
+                    """
+                    text = await self.extract_text_from_pdf_bytes(content)
+                    print(legislation.publication_number, len(text))
+                    results[legislation.publication_number] = text
+                    """
+
+        return results
+
