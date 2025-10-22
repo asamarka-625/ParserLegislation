@@ -78,19 +78,19 @@ class ParserPDF:
             config.logger.error(f"Неожиданная ошибка для {url}: {type(err).__name__}: {err}")
             raise
 
-    async def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
+    def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
         try:
 
-            ocr_text = await self._extract_text_with_ocr_from_bytes(pdf_bytes)
+            ocr_text = self._extract_text_with_ocr_from_bytes(pdf_bytes)
             final_text = ocr_text
 
             return final_text
 
         except Exception as e:
             config.logger.error(f"Ошибка при извлечении текста: {e}")
-            return None, "error"
+            return None
 
-    async def _extract_text_with_ocr_from_bytes(self, pdf_bytes: bytes) -> str:
+    def _extract_text_with_ocr_from_bytes(self, pdf_bytes: bytes) -> str:
         """Извлечение текста с помощью OCR из PDF байтов"""
         try:
             config.logger.info("Конвертация PDF в изображения...")
@@ -108,7 +108,7 @@ class ParserPDF:
                 config.logger.info(f"Обработка страницы {i + 1}/{len(images)}...")
 
                 # Обрабатываем изображение асинхронно
-                page_text = await self._process_image_async(image, i)
+                page_text = self._process_image_async(image, i)
                 all_text += page_text
 
             return all_text
@@ -119,21 +119,11 @@ class ParserPDF:
 
     async def _process_image_async(self, image: Image.Image, page_num: int) -> str:
         """Асинхронная обработка одного изображения"""
-        # Выполняем CPU-intensive задачи в thread pool
-        loop = asyncio.get_event_loop()
-
         # Предобработка изображения
-        processed_image = await loop.run_in_executor(
-            None, self._preprocess_image, image
-        )
+        processed_image = self._preprocess_image(image)
 
         # OCR распознавание
-        page_text = await loop.run_in_executor(
-            None,
-            self._perform_ocr,
-            processed_image,
-            page_num
-        )
+        page_text = self._perform_ocr(processed_image, page_num)
 
         return page_text
 
