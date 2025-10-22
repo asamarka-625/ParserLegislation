@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   parser:
     build: .
@@ -13,16 +15,58 @@ services:
       - .env
     restart: unless-stopped
 
-  processing:
+  proc-worker-1:
     build: .
-    command: python processing.py
+    command: python main.py --worker-id=1 --total-workers=4
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - WORKER_ID=1
+      - TOTAL_WORKERS=4
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - .:/app
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  proc-worker-2:
+    build: .
+    command: python main.py --worker-id=2 --total-workers=4
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - WORKER_ID=2
+      - TOTAL_WORKERS=4
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  proc-worker-3:
+    build: .
+    command: python main.py --worker-id=3 --total-workers=4
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - WORKER_ID=3
+      - TOTAL_WORKERS=4
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  proc-worker-4:
+    build: .
+    command: python main.py --worker-id=4 --total-workers=4
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - WORKER_ID=4
+      - TOTAL_WORKERS=4
+    depends_on:
+      db:
+        condition: service_healthy
     env_file:
       - .env
     restart: unless-stopped
@@ -38,6 +82,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 10s
     ports:
       - "5432:5432"
     volumes:
