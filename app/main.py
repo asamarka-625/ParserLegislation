@@ -62,89 +62,110 @@ async def worker_parser_pdf():
             )
 
 
-async def converter_multiprocess(all_legislation: Sequence[DataLegislation]):
-    """Асинхронная функция с многопроцессорной обработкой"""
-
-    # Синхронная обертка для асинхронной функции
-    def process_batch_sync(batch_data):
-        """Синхронная функция для обработки батча в процессе"""
-        # Создаем новый event loop для каждого процесса
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(process_batch(batch_data))
-        finally:
-            loop.close()
-
-    async def process_batch(batch_data):
-        """Обработка одного батча данных"""
+def process_documents_batch(documents_batch):
+    """Обработка батча документов в отдельном процессе"""
+    try:
         convert = ParserPDF()
-        contents_text = []
+        results = []
 
-        for legislation in batch_data:
-            text = convert.extract_text_from_pdf_bytes(legislation.binary_pdf)
-            contents_text.append((legislation.publication_number, text))
+        for doc_data in documents_batch:
+            try:
+                text = convert.extract_text_from_pdf_bytes(doc_data['binary_pdf'])
+                results.append({
+                    'publication_number': doc_data['publication_number'],
+                    'content': text,
+                    'success': True
+                })
+            except Exception as e:
+                results.append({
+                    'publication_number': doc_data['publication_number'],
+                    'content': None,
+                    'success': False,
+                    'error': str(e)
+                })
 
-        # Сохраняем результаты в базу
-        for i, data in enumerate(contents_text):
-            config.logger.info(f"Обновляем text в таблице. Итерация: {i + 1}/{len(contents_text)}")
-            await sql_update_text(
-                publication_number=data[0],
-                content=data[1]
-            )
+        return results
+    except Exception as e:
+        # Возвращаем ошибки для всего батча
+        return [{
+            'publication_number': 'batch_error',
+            'content': None,
+            'success': False,
+            'error': f"Batch processing error: {str(e)}"
+        }]
 
-        return len(contents_text)
 
-    # Разбиваем данные на батчи для параллельной обработки
+async def converter_multiprocess_batch(all_legislation: Sequence[DataLegislation]):
+    """Версия с обработкой целых батчей в процессах"""
+
+    # Подготавливаем данные
+    legislation_data_list = [
+        {
+            'publication_number': leg.publication_number,
+            'binary_pdf': leg.binary_pdf
+        }
+        for leg in all_legislation
+    ]
+
+    # Разбиваем на батчи
     cpu_count = os.cpu_count() or 4
-    batch_size = max(1, len(all_legislation) // cpu_count)
+    batch_size = max(10, len(legislation_data_list) // cpu_count)
 
     batches = []
-    for i in range(0, len(all_legislation), batch_size):
+    for i in range(0, len(legislation_data_list), batch_size):
         batch_end = i + batch_size
-        batches.append(all_legislation[i:batch_end])
+        batches.append(legislation_data_list[i:batch_end])
 
-    config.logger.info(f"Запуск обработки {len(all_legislation)} документов в {len(batches)} процессах")
+    config.logger.info(f"Запуск обработки {len(all_legislation)} документов в {len(batches)} батчах")
 
-    # Запускаем многопроцессорную обработку
+    # Обрабатываем батчи параллельно
     with ProcessPoolExecutor(max_workers=cpu_count) as executor:
         loop = asyncio.get_event_loop()
 
-        # Создаем задачи для каждого батча
+        # Запускаем обработку каждого батча
         tasks = [
-            loop.run_in_executor(executor, process_batch_sync, batch)
+            loop.run_in_executor(executor, process_documents_batch, batch)
             for batch in batches
         ]
 
-        # Ждем завершения всех задач
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        # Собираем результаты
+        batch_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Обрабатываем результаты
-        successful = 0
-        for i, result in enumerate(results):
+        # Обрабатываем все результаты
+        total_successful = 0
+        total_failed = 0
+
+        for i, result in enumerate(batch_results):
             if isinstance(result, Exception):
                 config.logger.error(f"Ошибка в батче {i}: {result}")
-            else:
-                successful += result
+                total_failed += len(batches[i]) if i < len(batches) else 1
+                continue
 
-        config.logger.info(f"Успешно обработано: {successful} документов")
+            # Сохраняем успешные результаты
+            for doc_result in result:
+                if doc_result['success']:
+                    await sql_update_text(
+                        publication_number=doc_result['publication_number'],
+                        content=doc_result['content']
+                    )
+                    total_successful += 1
+                else:
+                    config.logger.error(
+                        f"Ошибка обработки {doc_result['publication_number']}: {doc_result.get('error')}")
+                    total_failed += 1
+
+        config.logger.info(f"Обработка завершена. Успешно: {total_successful}, Ошибок: {total_failed}")
 
 
-async def worker_convert_binary_to_text():
-    """Основная рабочая функция"""
+async def worker_convert_binary_to_text_batch():
     await setup_database()
-
     all_legislation = await sql_get_legislation_by_have_binary_and_not_text()
 
     if not all_legislation:
         config.logger.info("Нет документов для обработки")
         return
 
-    config.logger.info(f"Найдено {len(all_legislation)} документов для обработки")
-
-    # Обрабатываем все документы с использованием многопроцессорности
-    await converter_multiprocess(all_legislation)
-
+    await converter_multiprocess_batch(all_legislation)
 
 
 
