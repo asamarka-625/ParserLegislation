@@ -42,67 +42,67 @@ async def worker_parser_data(
 async def worker_parser_pdf():
     await setup_database()
 
-    all_legislation = await sql_get_legislation_by_not_binary_pdf()
-    batch_size = 300
+    while True:
+        all_legislation = await sql_get_legislation_by_not_binary_pdf()
+        batch_size = 300
 
-    for batch_sart in range(0, len(all_legislation), batch_size):
-        config.logger.info(f"Берем партию {batch_size} для запросов {batch_sart}/{len(all_legislation)}")
+        if len(all_legislation) == 0:
+            break
 
-        batch_end = batch_sart + batch_size
-        parser = ParserPDF()
-        contents_binary = await parser.async_run(
-            list_legislation=list(all_legislation[batch_sart:batch_end])
-        )
+        for batch_sart in range(0, len(all_legislation), batch_size):
+            config.logger.info(f"Берем партию {batch_size} для запросов {batch_sart}/{len(all_legislation)}")
 
-        for i, data in enumerate(contents_binary):
-            config.logger.info(f"Обновляем binary_pdf в таблице. Итерация: {i + 1}/{len(contents_binary)}")
-            await sql_update_binary_pdf(
-                publication_number=data[0],
-                content=data[1]
+            batch_end = batch_sart + batch_size
+            parser = ParserPDF()
+            contents_binary = await parser.async_run(
+                list_legislation=list(all_legislation[batch_sart:batch_end])
             )
+
+            for i, data in enumerate(contents_binary):
+                config.logger.info(f"Обновляем binary_pdf в таблице. Итерация: {i + 1}/{len(contents_binary)}")
+                await sql_update_binary_pdf(
+                    publication_number=data[0],
+                    content=data[1]
+                )
+
+
+def process_single_document(doc_data):
+    """Обработка одного документа в отдельном процессе"""
+    try:
+        convert = ParserPDF()
+        text = convert.extract_text_from_pdf_bytes(doc_data['binary_pdf'])
+
+        return {
+            'publication_number': doc_data['publication_number'],
+            'content': text,
+            'success': True
+        }
+    except Exception as e:
+        return {
+            'publication_number': doc_data['publication_number'],
+            'content': None,
+            'success': False,
+            'error': str(e)
+        }
 
 
 def process_documents_batch(documents_batch):
     """Обработка батча документов в отдельном процессе"""
-    try:
-        convert = ParserPDF()
-        results = []
-
-        for doc_data in documents_batch:
-            try:
-                text = convert.extract_text_from_pdf_bytes(doc_data['binary_pdf'])
-                results.append({
-                    'publication_number': doc_data['publication_number'],
-                    'content': text,
-                    'success': True
-                })
-            except Exception as e:
-                results.append({
-                    'publication_number': doc_data['publication_number'],
-                    'content': None,
-                    'success': False,
-                    'error': str(e)
-                })
-
-        return results
-    except Exception as e:
-        # Возвращаем ошибки для всего батча
-        return [{
-            'publication_number': 'batch_error',
-            'content': None,
-            'success': False,
-            'error': f"Batch processing error: {str(e)}"
-        }]
+    results = []
+    for doc_data in documents_batch:
+        result = process_single_document(doc_data)
+        results.append(result)
+    return results
 
 
 async def converter_multiprocess_batch(all_legislation: Sequence[DataLegislation]):
     """Версия с обработкой целых батчей в процессах"""
 
-    # Подготавливаем данные
+    # Подготавливаем данные - только простые типы
     legislation_data_list = [
         {
             'publication_number': leg.publication_number,
-            'binary_pdf': leg.binary_pdf
+            'binary_pdf': leg.binary_pdf  # bytes должны быть сериализуемы
         }
         for leg in all_legislation
     ]
@@ -116,7 +116,7 @@ async def converter_multiprocess_batch(all_legislation: Sequence[DataLegislation
         batch_end = i + batch_size
         batches.append(legislation_data_list[i:batch_end])
 
-    config.logger.info(f"Запуск обработки {len(all_legislation)} документов в {len(batches)} батчах")
+    config.logger.info(f"Запуск обработки {len(all_legislation)} документов в {len(batches)} процессах")
 
     # Обрабатываем батчи параллельно
     with ProcessPoolExecutor(max_workers=cpu_count) as executor:
