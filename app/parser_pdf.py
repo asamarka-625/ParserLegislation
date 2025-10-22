@@ -117,7 +117,7 @@ class ParserPDF:
             config.logger.error(f"Ошибка OCR: {e}")
             return ""
 
-    async def _process_image_async(self, image: Image.Image, page_num: int) -> str:
+    def _process_image_async(self, image: Image.Image, page_num: int) -> str:
         """Асинхронная обработка одного изображения"""
         # Предобработка изображения
         processed_image = self._preprocess_image(image)
