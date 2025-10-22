@@ -1,5 +1,8 @@
 # Внешние зависимости
-from typing import Optional, List, Dict
+import psutil
+import os
+import resource
+from typing import Optional, List, Tuple
 import asyncio
 import pytesseract
 from PIL import Image
@@ -12,6 +15,22 @@ from app.models import DataLegislation
 
 
 config = get_config()
+
+
+def get_memory_usage():
+    process = psutil.Process(os.getpid())
+    memory_info = process.memory_info()
+
+    config.logger.info(f"=== ИСПОЛЬЗОВАНИЕ ПАМЯТИ ===")
+    config.logger.info(f"RSS (физическая): {memory_info.rss / 1024 / 1024:.2f} MB")
+    config.logger.info(f"VMS (виртуальная): {memory_info.vms / 1024 / 1024:.2f} MB")
+    config.logger.info(f"Пиковое RSS: {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024:.2f} MB")
+
+    # Общая память системы
+    system_memory = psutil.virtual_memory()
+    config.logger.info(f"Всего памяти: {system_memory.total / 1024 / 1024:.2f} MB")
+    config.logger.info(f"Использовано: {system_memory.used / 1024 / 1024:.2f} MB")
+    config.logger.info(f"Свободно: {system_memory.available / 1024 / 1024:.2f} MB")
 
 
 class ParserPDF:
@@ -146,24 +165,27 @@ class ParserPDF:
     async def async_run(
             self,
             list_legislation: List[DataLegislation]
-    ) -> Dict[str, bytes]:
+    ) -> List[Tuple[str, bytes]]:
         # Создаем клиент для каждой пачки
         timeout = httpx.Timeout(
             connect=30.0,  # Таймаут на подключение
-            read=30.0,  # Таймаут на чтение
+            read=60.0,  # Таймаут на чтение
             write=30.0,  # Таймаут на запрос
             pool=100.0  # Таймаут на получение из пула
         )
         limits = httpx.Limits(max_connections=200, max_keepalive_connections=100)
         batch_size = 45
-        results = {}
+        results = []
 
-        for batch_start in range(0, len(list_legislation), batch_size):
-            batch_end = batch_start + batch_size
+        async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
+            for batch_start in range(0, len(list_legislation), batch_size):
+                batch_end = batch_start + batch_size
+                current_batch = list_legislation[batch_start:batch_end]
 
-            async with httpx.AsyncClient(timeout=timeout, limits=limits) as client:
+                config.logger.info(f"Обрабатываем батч {batch_start}-{batch_end} из {len(list_legislation)}")
+
                 tasks = []
-                for legislation in list_legislation[batch_start:batch_end]:
+                for legislation in current_batch:
                     task = self.get_async_response(
                         url=f"{self.url_base}{legislation.publication_number}",
                         publication_number=legislation.publication_number,
@@ -171,23 +193,40 @@ class ParserPDF:
                     )
                     tasks.append(task)
 
-                batch_contents = await asyncio.gather(*tasks, return_exceptions=True)
+                # Добавляем timeout для всего батча
+                try:
+                    batch_contents = await asyncio.wait_for(
+                        asyncio.gather(*tasks, return_exceptions=True),
+                        timeout=60.0  # 60 секунд на батч
+                    )
+                except asyncio.TimeoutError:
+                    config.logger.error(f"Таймаут батча {batch_start}-{batch_end}")
+                    continue
 
                 # Обрабатываем результаты пачки
-                for legislation, content in zip(list_legislation[batch_start:batch_end], batch_contents):
-                    if isinstance(content, Exception) or not content:
+                successful = 0
+                failed = 0
+
+                for legislation, content in zip(current_batch, batch_contents):
+                    if isinstance(content, Exception):
                         config.logger.error(
-                            f"Не удалась загрузить PDF файл (publication_number: {legislation.publication_number})"
+                            f"Не удалась загрузить PDF файл (publication_number: {legislation.publication_number}): {content}"
                         )
+                        failed += 1
                         continue
 
-                    results[legislation.publication_number] = content
+                    if not content:
+                        config.logger.error(
+                            f"Пустой контент для PDF (publication_number: {legislation.publication_number})"
+                        )
+                        failed += 1
+                        continue
 
-                    """
-                    text = await self.extract_text_from_pdf_bytes(content)
-                    print(legislation.publication_number, len(text))
-                    results[legislation.publication_number] = text
-                    """
+                    results.append((legislation.publication_number, content))
+                    successful += 1
+
+                config.logger.info(f"Батч {batch_start}-{batch_end} завершен: {successful} успешно, {failed} ошибок")
+                get_memory_usage()
 
         return results
 

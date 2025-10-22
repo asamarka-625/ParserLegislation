@@ -79,7 +79,7 @@ async def sql_add_new_legislation(
         config.logger.error(f"Unexpected error add new legislation: {e}")
 
 
-# Выводим все законы, у которых нет текста
+# Выводим все законы, у которых нет байткода PDF файла
 @connection
 async def sql_get_legislation_by_not_binary_pdf(
         session: AsyncSession
@@ -95,10 +95,10 @@ async def sql_get_legislation_by_not_binary_pdf(
         return legislation
 
     except SQLAlchemyError as e:
-        config.logger.error(f"Database error read legislation with none text: {e}")
+        config.logger.error(f"Database error read legislation with none binary_pdf: {e}")
 
     except Exception as e:
-        config.logger.error(f"Unexpected error read legislation with none text: {e}")
+        config.logger.error(f"Unexpected error read legislation with none binary_pdf: {e}")
 
 
 # Записываем бинарный код PDF файла
@@ -122,7 +122,59 @@ async def sql_update_binary_pdf(
         config.logger.error(f"Legislation not found by publication_number: {publication_number}")
 
     except SQLAlchemyError as e:
-        config.logger.error(f"Database error read legislation with none text: {e}")
+        config.logger.error(f"Database error update binary_pdf: {e}")
 
     except Exception as e:
-        config.logger.error(f"Unexpected error read legislation with none text: {e}")
+        config.logger.error(f"Unexpected error update binary_pdf: {e}")
+
+
+# Выводим все законы, у которых нет текста, но есть binary_pdf
+@connection
+async def sql_get_legislation_by_have_binary_and_not_text(
+        session: AsyncSession
+) -> Sequence[DataLegislation]:
+    try:
+        legislation_results = await session.execute(
+            sa.select(DataLegislation)
+            .where(
+                DataLegislation.binary_pdf != None,
+                DataLegislation.text == None
+            )
+            .order_by(DataLegislation.id)
+        )
+
+        legislation = legislation_results.scalars().all()
+        return legislation
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error read legislation with binary_pdf and none text: {e}")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error read legislation with binary_pdf and none text: {e}")
+
+
+# Записываем текст PDf файла
+@connection
+async def sql_update_text(
+        publication_number: str,
+        content: str,
+        session: AsyncSession
+) -> None:
+    try:
+        legislation_results = await session.execute(
+            sa.select(DataLegislation)
+            .where(DataLegislation.publication_number == publication_number)
+        )
+
+        legislation = legislation_results.scalar_one()
+        legislation.text = content
+        await session.commit()
+
+    except NoResultFound:
+        config.logger.error(f"Legislation not found by publication_number: {publication_number}")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error update text: {e}")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error update text: {e}")

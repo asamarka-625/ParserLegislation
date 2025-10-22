@@ -1,8 +1,7 @@
 services:
-  app:
+  parser:
     build: .
-    ports:
-      - "8000:8000"
+    command: python parser.py
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}
     volumes:
@@ -10,3 +9,16 @@ services:
     env_file:
       - .env
     network_mode: "host"
+    restart: unless-stopped
+
+  processing:
+    build: .
+    command: python processing.py
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    network_mode: "host"
+    restart: unless-stopped
