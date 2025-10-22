@@ -1,1 +1,1 @@
-from app.main import worker_parser_pdf, worker_convert_binary_to_text
+from app.main import worker_parser_pdf, worker_convert_binary_to_text_batch
