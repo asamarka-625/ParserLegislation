@@ -9,7 +9,6 @@ from app.crud import (sql_add_new_legislation, sql_get_authorities_by_more_id,
                       sql_get_legislation_by_not_binary_pdf, sql_update_binary_pdf,
                       sql_get_legislation_by_have_binary_and_not_text, sql_update_text)
 from app.config import get_config
-from app.models import DataLegislation
 
 
 config = get_config()
@@ -64,38 +63,22 @@ async def worker_parser_pdf():
                 )
 
 
-def process_single_document(doc_data):
-    """Обработка одного документа в отдельном процессе"""
+# Функция для процесса
+def process_doc(legislation):
     try:
-        convert = ParserPDF()
-        text = convert.extract_text_from_pdf_bytes(doc_data['binary_pdf'])
+        # Важно: импорты внутри функции для работы в multiprocessing
+        from app.parser_pdf import ParserPDF
 
-        return {
-            'publication_number': doc_data['publication_number'],
-            'content': text,
-            'success': True
-        }
+        parser = ParserPDF()
+        text = parser.extract_text_from_pdf_bytes(legislation.binary_pdf)
+        return (legislation.publication_number, text, None)
+
     except Exception as e:
-        return {
-            'publication_number': doc_data['publication_number'],
-            'content': None,
-            'success': False,
-            'error': str(e)
-        }
+        return (legislation.publication_number, None, str(e))
 
 
 async def converter_absolute_simplest(all_legislation):
     """Самый простой вариант"""
-
-    # Функция для процесса
-    def process_doc(legislation):
-        try:
-            parser = ParserPDF()
-            text = parser.extract_text_from_pdf_bytes(legislation.binary_pdf)
-            return (legislation.publication_number, text, None)
-
-        except Exception as e:
-            return (legislation.publication_number, None, str(e))
 
     # Запускаем в 4 процессах
     with ProcessPoolExecutor(max_workers=4) as executor:
@@ -114,16 +97,35 @@ async def converter_absolute_simplest(all_legislation):
         for pub_num, text, error in results:
             if text:
                 await sql_update_text(publication_number=pub_num, content=text)
-
             elif error:
                 config.logger.error(f"Ошибка {pub_num}: {error}")
 
 
 async def worker_convert_binary_to_text_batch():
     docs = await sql_get_legislation_by_have_binary_and_not_text()
-    if docs:
-        await converter_absolute_simplest(docs)
 
+    if not docs:
+        config.logger.info("Нет документов для обработки")
+        return
+
+    config.logger.info(f"Найдено {len(docs)} документов для обработки")
+
+    # Обрабатываем батчами по 10 документов
+    batch_size = 10
+    total_batches = (len(docs) + batch_size - 1) // batch_size  # Округление вверх
+
+    for batch_num in range(0, len(docs), batch_size):
+        batch_end = batch_num + batch_size
+        current_batch = docs[batch_num:batch_end]
+        current_batch_num = (batch_num // batch_size) + 1
+
+        config.logger.info(f"Обработка батча {current_batch_num}/{total_batches} ({len(current_batch)} документов)")
+
+        await converter_absolute_simplest(current_batch)
+
+        config.logger.info(f"Батч {current_batch_num} завершен")
+
+    config.logger.info("Все документы обработаны")
 
 
 
