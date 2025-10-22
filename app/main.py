@@ -158,7 +158,6 @@ async def converter_multiprocess_batch(all_legislation: Sequence[DataLegislation
 
 
 async def worker_convert_binary_to_text_batch():
-    await setup_database()
     all_legislation = await sql_get_legislation_by_have_binary_and_not_text()
 
     if not all_legislation:
