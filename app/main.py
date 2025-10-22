@@ -77,21 +77,23 @@ def process_doc(legislation):
         return (legislation.publication_number, None, str(e))
 
 
+def process_doc_wrapper(leg):
+    """Обертка для совместимости с map"""
+    return process_doc(leg)
+
+
 async def converter_absolute_simplest(all_legislation):
     """Самый простой вариант"""
 
     # Запускаем в 4 процессах
-    with ProcessPoolExecutor(max_workers=4) as executor:
+    with ProcessPoolExecutor(max_workers=16) as executor:
         loop = asyncio.get_event_loop()
 
         # Запускаем все документы параллельно
-        futures = [
-            loop.run_in_executor(executor, process_doc, leg)
-            for leg in all_legislation
-        ]
-
-        # Ждем все результаты
-        results = await asyncio.gather(*futures)
+        results = await loop.run_in_executor(
+            executor,
+            lambda: list(executor.map(process_doc_wrapper, all_legislation))
+        )
 
         # Сохраняем в БД
         for pub_num, text, error in results:
@@ -111,7 +113,7 @@ async def worker_convert_binary_to_text_batch():
     config.logger.info(f"Найдено {len(docs)} документов для обработки")
 
     # Обрабатываем батчами по 10 документов
-    batch_size = 10
+    batch_size = 16
     total_batches = (len(docs) + batch_size - 1) // batch_size  # Округление вверх
 
     for batch_num in range(0, len(docs), batch_size):
