@@ -1,4 +1,25 @@
-version: '3.8'
+x-worker-config: &worker-config
+  build: .
+  environment:
+    - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    - PYTHONUNBUFFERED=1
+    - PYTHONHASHSEED=random
+  depends_on:
+    db:
+      condition: service_healthy
+  env_file:
+    - .env
+  restart: unless-stopped
+  init: true  # Для корректной обработки сигналов
+  # Ограничиваем ресурсы для стабильности
+  deploy:
+    resources:
+      limits:
+        memory: 512M
+        cpus: '0.5'
+      reservations:
+        memory: 256M
+        cpus: '0.25'
 
 services:
   parser:
@@ -15,68 +36,13 @@ services:
       - .env
     restart: unless-stopped
 
-  proc-worker-1:
-    build: .
-    command: python main.py --worker-id=1 --total-workers=4
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - WORKER_ID=1
-      - TOTAL_WORKERS=4
-    depends_on:
-      db:
-        condition: service_healthy
-    env_file:
-      - .env
-    restart: unless-stopped
-
-  proc-worker-2:
-    build: .
-    command: python main.py --worker-id=2 --total-workers=4
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - WORKER_ID=2
-      - TOTAL_WORKERS=4
-    depends_on:
-      db:
-        condition: service_healthy
-    env_file:
-      - .env
-    restart: unless-stopped
-
-  proc-worker-3:
-    build: .
-    command: python main.py --worker-id=3 --total-workers=4
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - WORKER_ID=3
-      - TOTAL_WORKERS=4
-    depends_on:
-      db:
-        condition: service_healthy
-    env_file:
-      - .env
-    restart: unless-stopped
-
-  proc-worker-4:
-    build: .
-    command: python main.py --worker-id=4 --total-workers=4
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      - WORKER_ID=4
-      - TOTAL_WORKERS=4
-    depends_on:
-      db:
-        condition: service_healthy
-    env_file:
-      - .env
-    restart: unless-stopped
-
   db:
     image: postgres:16-alpine
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_MAX_CONNECTIONS=200
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
@@ -87,8 +53,57 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres.conf:/etc/postgresql/postgresql.conf:ro
+    command: >
+      postgres -c config_file=/etc/postgresql/postgresql.conf
     env_file:
       - .env
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+
+  # Динамические воркеры (можно создать много)
+  worker-1: &worker-template
+    <<: *worker-config
+    command: python processing.py --worker-id=1 --total-workers=${TOTAL_WORKERS:-10}
+
+  worker-2:
+    <<: *worker-template
+    command: python processing.py --worker-id=2 --total-workers=${TOTAL_WORKERS:-10}
+
+  worker-3:
+    <<: *worker-template
+    command: python processing.py --worker-id=3 --total-workers=${TOTAL_WORKERS:-10}
+
+  worker-4:
+    <<: *worker-template
+    command: python processing.py --worker-id=4 --total-workers=${TOTAL_WORKERS:-10}
+
+  worker-5:
+    <<: *worker-template
+    command: python processing.py --worker-id=5 --total-workers=${TOTAL_WORKERS:-10}
+
+  worker-6:
+    <<: *worker-template
+    command: python processing.py --worker-id=6 --total-workers=${TOTAL_WORKERS:-10}
+
+  worker-7:
+    <<: *worker-template
+    command: python processing.py --worker-id=7 --total-workers=${TOTAL_WORKERS:-10}
+
+  worker-8:
+    <<: *worker-template
+    command: python processing.py --worker-id=8 --total-workers=${TOTAL_WORKERS:-10}
+
+  worker-9:
+    <<: *worker-template
+    command: python processing.py --worker-id=9 --total-workers=${TOTAL_WORKERS:-10}
+
+  worker-10:
+    <<: *worker-template
+    command: python processing.py --worker-id=10 --total-workers=${TOTAL_WORKERS:-10}
 
 volumes:
   postgres_data:
