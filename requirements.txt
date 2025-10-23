@@ -28,13 +28,14 @@ typing_extensions==4.15.0
 urllib3==2.5.0
 psutil==7.1.1
 
-# Для PaddleOCR с GPU
-paddlepaddle-gpu==2.5.1
-paddleocr>=2.7.0
+# PyTorch для CUDA 11.8
+torch==2.0.1+cu118
+torchvision==0.15.2+cu118
+--index-url https://download.pytorch.org/whl/cu118
 
-# PyTorch с CUDA поддержкой
-torch>=2.0.0
-torchvision>=0.15.0
+# PaddlePaddle для CUDA 11.8
+paddlepaddle-gpu==2.5.1.post118
+paddleocr>=2.7.0
 
 # Остальные зависимости
 pdf2image>=1.16.3
