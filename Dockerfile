@@ -34,5 +34,13 @@ COPY requirements.txt .
 # Устанавливаем Python пакеты
 RUN python3.12 -m pip install --no-cache-dir -r requirements.txt
 
+# Устанавливаем libssl1.1 из репозитория Ubuntu 20.04
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    ca-certificates \
+    && wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb \
+    && dpkg -i libssl1.1_1.1.1f-1ubuntu2_amd64.deb \
+    && rm libssl1.1_1.1.1f-1ubuntu2_amd64.deb
+
 # Копируем код
 COPY . .
