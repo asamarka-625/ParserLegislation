@@ -30,13 +30,7 @@ ENV LC_ALL C.UTF-8
 COPY requirements.txt .
 
 # Устанавливаем Python пакеты
-RUN pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
 
 # Копируем код
 COPY . .
-
-# Создаем пользователя
-RUN useradd -m -u 1000 worker && chown -R worker:worker /app
-USER worker
-
-CMD ["python", "processing.py"]
