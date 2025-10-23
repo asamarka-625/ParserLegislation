@@ -24,7 +24,7 @@ x-worker-config: &worker-config
 services:
   parser:
     build: .
-    command: python3 parser.py
+    command: python3.12 parser.py
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     depends_on:
@@ -59,19 +59,19 @@ services:
   # Динамические воркеры (можно создать много)
   worker-1: &worker-template
     <<: *worker-config
-    command: python3 processing.py --worker-id=1 --total-workers=${TOTAL_WORKERS:-4}
+    command: python3.12 processing.py --worker-id=1 --total-workers=${TOTAL_WORKERS:-4}
 
   worker-2:
     <<: *worker-template
-    command: python3 processing.py --worker-id=2 --total-workers=${TOTAL_WORKERS:-4}
+    command: python3.12 processing.py --worker-id=2 --total-workers=${TOTAL_WORKERS:-4}
 
   worker-3:
     <<: *worker-template
-    command: python3 processing.py --worker-id=3 --total-workers=${TOTAL_WORKERS:-4}
+    command: python3.12 processing.py --worker-id=3 --total-workers=${TOTAL_WORKERS:-4}
 
   worker-4:
     <<: *worker-template
-    command: python3 processing.py --worker-id=4 --total-workers=${TOTAL_WORKERS:-4}
+    command: python3.12 processing.py --worker-id=4 --total-workers=${TOTAL_WORKERS:-4}
 
 volumes:
   postgres_data:
