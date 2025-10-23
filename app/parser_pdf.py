@@ -4,11 +4,13 @@ import os
 import resource
 from typing import Optional, List, Tuple
 import asyncio
-import pytesseract
 from PIL import Image
 from pdf2image import convert_from_bytes
 from fake_useragent import UserAgent
 import httpx
+from paddleocr import PaddleOCR
+import torch
+import numpy as np
 # Внутренние модули
 from app.config import get_config
 from app.models import DataLegislation
@@ -44,8 +46,27 @@ class ParserPDF:
             "Referer": "http://publication.pravo.gov.ru/documents/monthly",
             "User-Agent": self.ua.random
         }
-        # Настройка для русского языка
-        self.tessdata_dir_config = '--tessdata-dir "/usr/share/tesseract-ocr/4.00/tessdata"'
+
+    def init_gpu(self):
+        """Инициализация PaddleOCR с GPU"""
+        try:
+            use_gpu = torch.cuda.is_available()
+            self.ocr = PaddleOCR(
+                use_angle_cls=True,
+                lang='ru',
+                use_gpu=use_gpu,
+                gpu_mem=1000,  # Лимит памяти GPU в MB
+                show_log=False  # ✅ Отключаем лишние логи PaddleOCR
+            )
+            config.logger.info(f"PaddleOCR инициализирован, GPU: {use_gpu}")
+
+            if use_gpu:
+                gpu_name = torch.cuda.get_device_name(0)
+                config.logger.info(f"Используется GPU: {gpu_name}")
+
+        except Exception as e:
+            config.logger.error(f"Ошибка инициализации PaddleOCR: {e}")
+            self.ocr = None
 
     async def get_async_response(
             self,
@@ -80,11 +101,13 @@ class ParserPDF:
 
     def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
         try:
+            # Проверяем что OCR инициализирован
+            if self.ocr is None:
+                config.logger.error("PaddleOCR не инициализирован")
+                return None
 
             ocr_text = self._extract_text_with_ocr_from_bytes(pdf_bytes)
-            final_text = ocr_text
-
-            return final_text
+            return ocr_text
 
         except Exception as e:
             config.logger.error(f"Ошибка при извлечении текста: {e}")
@@ -107,9 +130,9 @@ class ParserPDF:
             for i, image in enumerate(images):
                 config.logger.info(f"Обработка страницы {i + 1}/{len(images)}...")
 
-                # Обрабатываем изображение асинхронно
+                # Обрабатываем изображение
                 page_text = self._process_image_async(image, i)
-                all_text += page_text
+                all_text += f"\n--- Страница {i + 1} ---\n{page_text}"
 
             return all_text
 
@@ -118,39 +141,52 @@ class ParserPDF:
             return ""
 
     def _process_image_async(self, image: Image.Image, page_num: int) -> str:
-        """Асинхронная обработка одного изображения"""
-        # Предобработка изображения
-        processed_image = self._preprocess_image(image)
+        """Обработка одного изображения"""
+        try:
+            # Предобработка изображения
+            processed_image = self._preprocess_image(image)
 
-        # OCR распознавание
-        page_text = self._perform_ocr(processed_image, page_num)
+            # OCR распознавание
+            page_text = self._perform_ocr_paddle(processed_image, page_num)
+            return page_text
 
-        return page_text
+        except Exception as e:
+            config.logger.error(f"Ошибка обработки страницы {page_num + 1}: {e}")
+            return ""
 
     @staticmethod
     def _preprocess_image(image: Image.Image) -> Image.Image:
         """Предобработка изображения для улучшения распознавания"""
-        # Конвертируем в grayscale если нужно
-        if image.mode != 'L':
-            image = image.convert('L')
-
+        # PaddleOCR лучше работает с RGB, а не grayscale
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
         return image
 
-    @staticmethod
-    def _perform_ocr(image: Image.Image, page_num: int) -> str:
-        """Выполнение OCR распознавания"""
+    def _perform_ocr_paddle(self, image: Image.Image, page_num: int) -> str:
+        """PaddleOCR с GPU ускорением"""
         try:
-            page_text = pytesseract.image_to_string(
-                image,
-                lang='rus+eng',
-                config='--psm 6 -c preserve_interword_spaces=1'
-            )
+            # Конвертируем PIL Image в numpy array
+            image_np = np.array(image)
 
-            return page_text
+            # ✅ Проверяем что изображение не пустое
+            if image_np.size == 0:
+                config.logger.warning(f"Пустое изображение на странице {page_num + 1}")
+                return ""
+
+            # Распознавание текста
+            result = self.ocr.ocr(image_np, cls=True)
+
+            if result and result[0]:
+                texts = [line[1][0] for line in result[0]]
+                return '\n'.join(texts)
+            else:
+                config.logger.info(f"Текст не найден на странице {page_num + 1}")
+                return ""
 
         except Exception as e:
-            config.logger.error(f"Ошибка OCR на странице {page_num + 1}: {e}")
+            config.logger.error(f"PaddleOCR ошибка на странице {page_num + 1}: {e}")
             return ""
+
 
     async def async_run(
             self,
