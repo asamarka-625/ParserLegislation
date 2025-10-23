@@ -2,23 +2,18 @@ FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu20.04
 
 WORKDIR /app
 
-# Устанавливаем локаль ДО установки пакетов
+# Обновляем список пакетов ПЕРВЫМ делом
+RUN apt-get update
+
+# Устанавливаем локаль (упрощенная версия)
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Moscow
+RUN apt-get install -y --no-install-recommends tzdata && \
+    ln -fs /usr/share/zoneinfo/Europe/Moscow /etc/localtime && \
+    dpkg-reconfigure --frontend noninteractive tzdata
 
-RUN apt-get update && apt-get install -y \
-    tzdata \
-    locales \
-    && ln -fs /usr/share/zoneinfo/Europe/Moscow /etc/localtime \
-    && dpkg-reconfigure --frontend noninteractive tzdata \
-    && sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
-    && sed -i -e 's/# ru_RU.UTF-8 UTF-8/ru_RU.UTF-8 UTF-8/' /etc/locale.gen \
-    && echo 'LANG="en_US.UTF-8"'> /etc/default/locale \
-    && dpkg-reconfigure --frontend=noninteractive locales \
-    && update-locale LANG=en_US.UTF-8
-
-# Теперь устанавливаем остальные пакеты
-RUN apt-get update && apt-get install -y \
+# Устанавливаем системные зависимости
+RUN apt-get install -y --no-install-recommends \
     poppler-utils \
     tesseract-ocr \
     tesseract-ocr-rus \
@@ -26,6 +21,10 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Настраиваем локаль для Python (без пакета locales)
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
 
 # Копируем зависимости
 COPY requirements.txt .
@@ -35,3 +34,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Копируем код
 COPY . .
+
+# Создаем пользователя
+RUN useradd -m -u 1000 worker && chown -R worker:worker /app
+USER worker
+
+CMD ["python", "processing.py"]
