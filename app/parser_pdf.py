@@ -293,10 +293,7 @@ class ParserPDF:
 
             if lines_with_data:
                 # Восстанавливаем структуру с учетом координат
-                reconstructed_text = self._reconstruct_text_with_layout(lines_with_data)
-
-                # Применяем дополнительную постобработку ко всему тексту
-                final_text = self._postprocess_russian_text(reconstructed_text)
+                final_text = self._reconstruct_text_with_layout(lines_with_data)
 
                 avg_confidence = sum(item['confidence'] for item in lines_with_data) / len(lines_with_data)
                 config.logger.info(
@@ -310,56 +307,6 @@ class ParserPDF:
         except Exception as e:
             config.logger.error(f"Ошибка парсинга результатов OCR: {e}")
             return ""
-
-    def _correct_russian_ocr_errors(self, text: str) -> str:
-        """Более безопасная коррекция"""
-        corrections = {
-            # Только очевидные замены букв
-            'A': 'А', 'B': 'В', 'C': 'С', 'E': 'Е',
-            'H': 'Н', 'K': 'К', 'M': 'М', 'O': 'О',
-            'P': 'Р', 'T': 'Т', 'X': 'Х', 'Y': 'У',
-            'a': 'а', 'c': 'с', 'e': 'е', 'o': 'о',
-            'p': 'р', 'x': 'х', 'y': 'у',
-
-            # Только очевидные опечатки
-            'слъ': 'сле', 'тчк': 'тск'
-        }
-
-        # Применяем замены только к буквенным контекстам
-        words = text.split()
-        corrected_words = []
-
-        for word in words:
-            if word.isalpha():  # Только для слов из букв
-                for wrong, correct in corrections.items():
-                    word = word.replace(wrong, correct)
-            corrected_words.append(word)
-
-        return ' '.join(corrected_words)
-
-    def _postprocess_russian_text(self, text: str) -> str:
-        """Постобработка всего текста для улучшения качества"""
-        # Исправляем частые проблемы с пробелами
-        text = re.sub(r'\s+', ' ', text)  # Множественные пробелы
-        text = re.sub(r'(\d)\s+(\d)', r'\1\2', text)  # Цифры разделенные пробелами
-        text = re.sub(r'([а-яё])\s{1,2}([а-яё])', r'\1\2', text)  # Разорванные слова
-
-        # Восстанавливаем заглавные буквы в начале предложений
-        sentences = re.split(r'([.!?])\s+', text)
-        processed_sentences = []
-
-        for i in range(0, len(sentences), 2):
-            if i < len(sentences):
-                sentence = sentences[i].strip()
-                if sentence and len(sentence) > 1:
-                    # Первую букву делаем заглавной
-                    sentence = sentence[0].upper() + sentence[1:]
-                processed_sentences.append(sentence)
-
-                if i + 1 < len(sentences):
-                    processed_sentences.append(sentences[i + 1])
-
-        return ' '.join(processed_sentences)
 
     def _reconstruct_text_with_layout(self, lines_data: List[dict]) -> str:
         """Улучшенное восстановление текста с учетом layout"""
