@@ -37,5 +37,25 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# Устанавливаем правильные переменные окружения для CUDA
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${CUDA_HOME}/lib:${LD_LIBRARY_PATH}
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Создаем симлинки для cuDNN
+RUN ldconfig && \
+    ln -sf /usr/lib/x86_64-linux-gnu/libcudnn.so.8 /usr/lib/x86_64-linux-gnu/libcudnn.so && \
+    ln -sf /usr/lib/x86_64-linux-gnu/libcudnn_adv_train.so.8 /usr/lib/x86_64-linux-gnu/libcudnn_adv_train.so && \
+    ln -sf /usr/lib/x86_64-linux-gnu/libcudnn_adv_infer.so.8 /usr/lib/x86_64-linux-gnu/libcudnn_adv_infer.so && \
+    ln -sf /usr/lib/x86_64-linux-gnu/libcudnn_cnn_train.so.8 /usr/lib/x86_64-linux-gnu/libcudnn_cnn_train.so && \
+    ln -sf /usr/lib/x86_64-linux-gnu/libcudnn_cnn_infer.so.8 /usr/lib/x86_64-linux-gnu/libcudnn_cnn_infer.so && \
+    ln -sf /usr/lib/x86_64-linux-gnu/libcudnn_ops_train.so.8 /usr/lib/x86_64-linux-gnu/libcudnn_ops_train.so && \
+    ln -sf /usr/lib/x86_64-linux-gnu/libcudnn_ops_infer.so.8 /usr/lib/x86_64-linux-gnu/libcudnn_ops_infer.so
+
+# Проверяем установку CUDA и cuDNN
+RUN nvcc --version && \
+    ldconfig -p | grep cudnn
+
 # Копируем код
 COPY . .
