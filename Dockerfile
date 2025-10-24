@@ -15,6 +15,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     tesseract-ocr-rus \
     tesseract-ocr-eng \
+    python3 \
+    python3-pip \
+    python3-venv \
     libgl1 \
     libglib2.0-0 \
     libsm6 \
@@ -23,13 +26,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && ln -fs /usr/share/zoneinfo/Europe/Moscow /etc/localtime \
     && dpkg-reconfigure --frontend noninteractive tzdata \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && update-alternatives --install /usr/bin/python python /usr/bin/python3 1 \
+    && update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
 # Копируем зависимости
 COPY requirements.txt .
 
-# Устанавливаем Python зависимости
-RUN pip install --no-cache-dir -r requirements.txt
+# Обновляем pip и устанавливаем Python зависимости
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Копируем код
 COPY . .
