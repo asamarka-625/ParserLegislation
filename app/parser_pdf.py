@@ -68,11 +68,11 @@ class ParserPDF:
 
                 # Параметры детекции
                 det_db_thresh=0.3,
-                det_db_box_thresh=0.6,
+                det_db_box_thresh=0.3,
                 det_db_unclip_ratio=1.5,
 
                 # Параметры распознавания
-                rec_batch_num=6,
+                rec_batch_num=16,
                 drop_score=0.5  # минимальный порог уверенности
             )
             config.logger.info(f"PaddleOCR инициализирован, GPU: {use_gpu}")
