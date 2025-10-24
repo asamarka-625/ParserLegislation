@@ -1,6 +1,7 @@
 # Внешние зависимости
 import psutil
 import os
+import re
 import resource
 from typing import Optional, List, Tuple
 import asyncio
@@ -70,23 +71,27 @@ class ParserPDF:
                 # Улучшенные параметры детекции
                 det_db_thresh=0.3,
                 det_db_box_thresh=0.5,  # Увеличил для лучшего качества
-                det_db_unclip_ratio=2.0,  # Увеличил для лучшего охвата текста
+                det_db_unclip_ratio=2,  # Увеличил для лучшего охвата текста
 
                 # Улучшенные параметры распознавания
-                rec_batch_num=8,  # Уменьшил для стабильности
-                drop_score=0.7,  # Повысил порог уверенности
+                rec_batch_num=2,  # Уменьшил для стабильности
+                drop_score=0.5,  # Повысил порог уверенности
 
                 # Дополнительные настройки
-                det_limit_side_len=1920,  # Максимальный размер стороны для детекции
+                det_limit_side_len=2048,  # Максимальный размер стороны для детекции
                 det_limit_type='max',  # Ограничение по максимальной стороне
-                rec_image_height=48,  # Высота изображения для распознавания
+                rec_image_height=64,  # Высота изображения для распознавания
 
-                # Улучшенные параметры для русского языка
-                rec_char_dict_path=None,  # Использовать стандартный словарь
-                cls_image_shape='3, 48, 192',  # Размер для классификации
-                cls_batch_num=6,
-                cls_thresh=0.9,
+                # Специфичные настройки для русского языка
+                rec_char_type='ru',  # Явно указываем русский язык
+                cls_batch_num=4,
+                cls_thresh=0.8,
+
+                # Дополнительные улучшения
+                use_dilation=True,  # Расширение для детекции мелкого текста
+                det_algorithm='DB',  # Явно указываем алгоритм детекции
             )
+
             config.logger.info(f"PaddleOCR инициализирован, GPU: {use_gpu}")
 
             if use_gpu:
@@ -150,10 +155,10 @@ class ParserPDF:
             # Конвертируем PDF байты в изображения
             images = convert_from_bytes(
                 pdf_bytes,
-                dpi=400,
-                fmt='JPEG',
-                thread_count=2,
-                grayscale=False,
+                dpi=500,
+                fmt='PNG',
+                thread_count=1,
+                grayscale=True,
                 strict=False
             )
 
@@ -188,16 +193,17 @@ class ParserPDF:
 
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
         """Предобработка изображения для улучшения распознавания"""
-        # PaddleOCR лучше работает с RGB, а не grayscale
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
+        original_width, original_height = image.size
+        scale_factor = 1.0
 
-        width, height = image.size
-        if width < 1200 or height < 1600:
-            # Увеличиваем размер для мелкого текста
-            new_width = max(width, 1200)
-            new_height = max(height, 1600)
+        if original_width < 1500 or original_height < 2000:
+            scale_factor = max(1500 / original_width, 2000 / original_height, 1.5)
+            # Ограничиваем максимальное увеличение
+            scale_factor = min(scale_factor, 3.0)
+            new_width = int(original_width * scale_factor)
+            new_height = int(original_height * scale_factor)
             image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            config.logger.info(f"Увеличен размер изображения в {scale_factor:.2f} раз")
 
         # Увеличиваем контрастность
         image = self._enhance_image(image)
@@ -210,118 +216,184 @@ class ParserPDF:
         img_cv = np.array(image)
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
 
-        # Увеличиваем резкость
-        kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
-        img_cv = cv2.filter2D(img_cv, -1, kernel)
+        # 1. Убираем шум
+        img_denoised = cv2.medianBlur(img_cv, 3)
 
-        # Увеличиваем контрастность с CLAHE
-        lab = cv2.cvtColor(img_cv, cv2.COLOR_BGR2LAB)
-        lab_planes = list(cv2.split(lab))
+        # 2. Улучшаем резкость - более мягкое ядро для русского текста
+        kernel = np.array([[0, -0.5, 0], [-0.5, 3, -0.5], [0, -0.5, 0]])
+        img_sharpened = cv2.filter2D(img_denoised, -1, kernel)
+
+        # 3. Адаптивное улучшение контраста для текста
+        lab = cv2.cvtColor(img_sharpened, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+
+        # CLAHE для улучшения контраста без артефактов
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        lab_planes[0] = clahe.apply(lab_planes[0])
-        lab = cv2.merge(lab_planes)
-        img_cv = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+        l_enhanced = clahe.apply(l)
 
-        # Дополнительное улучшение контраста
-        img_cv = cv2.convertScaleAbs(img_cv, alpha=1.2, beta=10)
+        # Объединяем обратно
+        lab_enhanced = cv2.merge([l_enhanced, a, b])
+        img_contrast = cv2.cvtColor(lab_enhanced, cv2.COLOR_LAB2BGR)
+
+        # 4. Бинаризация для улучшения читаемости
+        gray = cv2.cvtColor(img_contrast, cv2.COLOR_BGR2GRAY)
+
+        # Адаптивный порог для разных условий освещения
+        binary = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY, 11, 2
+        )
+
+        # Конвертируем обратно в цветное для PaddleOCR
+        img_final = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
 
         # Конвертируем обратно в PIL
-        img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
+        img_rgb = cv2.cvtColor(img_final, cv2.COLOR_BGR2RGB)
         return Image.fromarray(img_rgb)
 
     def _perform_ocr_paddle(self, image: Image.Image, page_num: int) -> str:
-        """PaddleOCR с GPU ускорением"""
+        """Улучшенное распознавание с постобработкой"""
         try:
-            # Конвертируем PIL Image в numpy array
             image_np = np.array(image)
 
-            # ✅ Проверяем что изображение не пустое
             if image_np.size == 0:
                 config.logger.warning(f"Пустое изображение на странице {page_num + 1}")
                 return ""
 
-            # Распознавание текста
-            result = self.ocr.ocr(image_np, cls=True)
+            # Распознавание с дополнительными параметрами
+            result = self.ocr.ocr(image_np, cls=True, bin=False, inv=False)
 
-            return self._parse_ocr_result(result, page_num)
+            # Постобработка результатов
+            return self._parse_and_correct_ocr_result(result, page_num)
 
         except Exception as e:
             config.logger.error(f"PaddleOCR ошибка на странице {page_num + 1}: {e}")
             return ""
 
-    def _parse_ocr_result(self, result, page_num: int) -> str:
-        """Парсинг и постобработка результатов OCR"""
+    def _parse_and_correct_ocr_result(self, result, page_num: int) -> str:
+        """Парсинг и коррекция результатов OCR для русского языка"""
         if not result or not result[0]:
             config.logger.info(f"Текст не найден на странице {page_num + 1}")
             return ""
 
         try:
-            texts = []
-            confidences = []
+            lines_with_data = []
 
             for line in result[0]:
                 if line and len(line) >= 2:
                     text = line[1][0]
                     confidence = line[1][1]
 
-                    # Фильтруем по уверенности
-                    if confidence >= 0.7:  # Используем тот же порог что в drop_score
-                        texts.append(text)
-                        confidences.append(confidence)
+                    # Применяем коррекцию для распространенных ошибок русского языка
+                    corrected_text = self._correct_russian_ocr_errors(text)
 
-            if texts:
-                # Объединяем текст с учетом структуры
-                full_text = self._reconstruct_text(texts, result[0])
-                avg_confidence = sum(confidences) / len(confidences)
+                    # Более низкий порог уверенности с последующей коррекцией
+                    if confidence >= 0.4:
+                        lines_with_data.append({
+                            'text': corrected_text,
+                            'confidence': confidence,
+                            'bbox': line[0]
+                        })
+
+            if lines_with_data:
+                # Восстанавливаем структуру с учетом координат
+                reconstructed_text = self._reconstruct_text_with_layout(lines_with_data)
+
+                # Применяем дополнительную постобработку ко всему тексту
+                final_text = self._postprocess_russian_text(reconstructed_text)
+
+                avg_confidence = sum(item['confidence'] for item in lines_with_data) / len(lines_with_data)
                 config.logger.info(
-                    f"Страница {page_num + 1}: распознано {len(texts)} строк, средняя уверенность: {avg_confidence:.3f}")
-                return full_text
+                    f"Страница {page_num + 1}: {len(lines_with_data)} строк, уверенность: {avg_confidence:.3f}")
+
+                return final_text
             else:
-                config.logger.info(f"На странице {page_num + 1} не найдено текста с достаточной уверенностью")
+                config.logger.info(f"На странице {page_num + 1} не найдено текста")
                 return ""
 
         except Exception as e:
             config.logger.error(f"Ошибка парсинга результатов OCR: {e}")
             return ""
 
-    def _reconstruct_text(self, texts: List[str], raw_result: List) -> str:
-        """Восстановление структуры текста из результатов OCR"""
+    def _correct_russian_ocr_errors(self, text: str) -> str:
+        """Коррекция распространенных ошибок OCR для русского языка"""
+        corrections = {
+            # Частые символов
+            '0': 'О', '1': 'І', '2': 'Z', '3': 'З',
+            '4': 'Ч', '5': 'Б', '6': 'б', '7': 'Т',
+            '8': 'В', '9': 'д',
+
+            # Английские и русские буквы
+            'A': 'А', 'B': 'В', 'C': 'С', 'E': 'Е',
+            'H': 'Н', 'K': 'К', 'M': 'М', 'O': 'О',
+            'P': 'Р', 'T': 'Т', 'X': 'Х', 'Y': 'У',
+            'a': 'а', 'c': 'с', 'e': 'е', 'o': 'о',
+            'p': 'р', 'x': 'х', 'y': 'у',
+
+            # Частые опечатки в словах
+            'слъ': 'сле', 'тчк': 'тск', 'ьч': 'ьс'
+        }
+
+        corrected_text = text
+        for wrong, correct in corrections.items():
+            corrected_text = corrected_text.replace(wrong, correct)
+
+        return corrected_text
+
+    def _postprocess_russian_text(self, text: str) -> str:
+        """Постобработка всего текста для улучшения качества"""
+        # Исправляем частые проблемы с пробелами
+        text = re.sub(r'\s+', ' ', text)  # Множественные пробелы
+        text = re.sub(r'(\d)\s+(\d)', r'\1\2', text)  # Цифры разделенные пробелами
+        text = re.sub(r'([а-яё])\s+([а-яё])', r'\1\2', text)  # Разорванные слова
+
+        # Восстанавливаем заглавные буквы в начале предложений
+        sentences = re.split(r'([.!?])\s+', text)
+        processed_sentences = []
+
+        for i in range(0, len(sentences), 2):
+            if i < len(sentences):
+                sentence = sentences[i].strip()
+                if sentence and len(sentence) > 1:
+                    # Первую букву делаем заглавной
+                    sentence = sentence[0].upper() + sentence[1:]
+                processed_sentences.append(sentence)
+
+                if i + 1 < len(sentences):
+                    processed_sentences.append(sentences[i + 1])
+
+        return ' '.join(processed_sentences)
+
+    def _reconstruct_text_with_layout(self, lines_data: List[dict]) -> str:
+        """Восстановление текста с учетом пространственного расположения"""
         try:
-            # Сортируем строки по Y-координате (сверху вниз)
-            lines_with_pos = []
-            for line in raw_result:
-                if line and len(line) >= 2:
-                    points = line[0]
-                    text = line[1][0]
-                    # Берем среднюю Y-координату
-                    y_coord = sum(point[1] for point in points) / len(points)
-                    lines_with_pos.append((y_coord, text))
+            # Группируем строки по Y-координатам
+            lines_data.sort(key=lambda x: x['bbox'][0][1])  # Сортировка по Y
 
-            # Сортируем по Y-координате
-            lines_with_pos.sort(key=lambda x: x[0])
-
-            # Объединяем текст
             reconstructed = []
-            current_line = []
-            last_y = None
-            y_threshold = 25  # Порог для определения новой строки
+            current_paragraph = []
+            last_bottom = None
 
-            for y, text in lines_with_pos:
-                if last_y is None or abs(y - last_y) > y_threshold:
-                    if current_line:
-                        reconstructed.append(' '.join(current_line))
-                        current_line = []
-                current_line.append(text)
-                last_y = y
+            for line in lines_data:
+                bbox = line['bbox']
+                top = bbox[0][1]
 
-            if current_line:
-                reconstructed.append(' '.join(current_line))
+                if last_bottom is not None and top - last_bottom > 50:  # Новый параграф
+                    if current_paragraph:
+                        reconstructed.append(' '.join(current_paragraph))
+                        current_paragraph = []
+
+                current_paragraph.append(line['text'])
+                last_bottom = bbox[2][1]  # Нижняя координата bbox
+
+            if current_paragraph:
+                reconstructed.append(' '.join(current_paragraph))
 
             return '\n'.join(reconstructed)
 
         except Exception as e:
-            config.logger.error(f"Ошибка восстановления текста: {e}")
-            return '\n'.join(texts)
+            config.logger.error(f"Ошибка восстановления структуры: {e}")
+            return ' '.join(item['text'] for item in lines_data)
 
     async def async_run(
             self,
