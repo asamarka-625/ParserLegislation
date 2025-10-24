@@ -1,5 +1,5 @@
 # Внешние зависимости
-from typing import Sequence
+from typing import Sequence, Optional
 from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -178,3 +178,28 @@ async def sql_update_text(
 
     except Exception as e:
         config.logger.error(f"Unexpected error update text: {e}")
+
+
+# Выводим текст PDF файла
+@connection
+async def sql_get_text_by_id(
+        legislation_id: int,
+        session: AsyncSession
+) -> Optional[str]:
+    try:
+        legislation_results = await session.execute(
+            sa.select(DataLegislation.text)
+            .where(DataLegislation.id == legislation_id)
+        )
+
+        text = legislation_results.scalar_one()
+        return text
+
+    except NoResultFound:
+        config.logger.error(f"Legislation not found by legislation_id: {legislation_id}")
+
+    except SQLAlchemyError as e:
+        config.logger.error(f"Database error read text by legislation_id {legislation_id}: {e}")
+
+    except Exception as e:
+        config.logger.error(f"Unexpected error read text by legislation_id {legislation_id}: {e}")

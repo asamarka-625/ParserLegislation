@@ -11,6 +11,7 @@ import httpx
 from paddleocr import PaddleOCR
 import torch
 import numpy as np
+import cv2
 # Внутренние модули
 from app.config import get_config
 from app.models import DataLegislation
@@ -53,7 +54,7 @@ class ParserPDF:
             use_gpu = torch.cuda.is_available()
             self.ocr = PaddleOCR(
                 lang='ru',
-                use_angle_cls=False,  # определение ориентации текста
+                use_angle_cls=True,  # определение ориентации текста
                 # det=True,  # детекция текста (включено по умолчанию)
                 # rec=True,  # распознавание текста (включено по умолчанию)
                 # cls=True,  # классификация ориентации
@@ -66,14 +67,25 @@ class ParserPDF:
                 # Производительность
                 use_gpu=True,  # использовать GPU если доступно
 
-                # Параметры детекции
+                # Улучшенные параметры детекции
                 det_db_thresh=0.3,
-                det_db_box_thresh=0.3,
-                det_db_unclip_ratio=1.5,
+                det_db_box_thresh=0.5,  # Увеличил для лучшего качества
+                det_db_unclip_ratio=2.0,  # Увеличил для лучшего охвата текста
 
-                # Параметры распознавания
-                rec_batch_num=16,
-                drop_score=0.5  # минимальный порог уверенности
+                # Улучшенные параметры распознавания
+                rec_batch_num=8,  # Уменьшил для стабильности
+                drop_score=0.7,  # Повысил порог уверенности
+
+                # Дополнительные настройки
+                det_limit_side_len=1920,  # Максимальный размер стороны для детекции
+                det_limit_type='max',  # Ограничение по максимальной стороне
+                rec_image_height=48,  # Высота изображения для распознавания
+
+                # Улучшенные параметры для русского языка
+                rec_char_dict_path=None,  # Использовать стандартный словарь
+                cls_image_shape='3, 48, 192',  # Размер для классификации
+                cls_batch_num=6,
+                cls_thresh=0.9,
             )
             config.logger.info(f"PaddleOCR инициализирован, GPU: {use_gpu}")
 
@@ -138,8 +150,11 @@ class ParserPDF:
             # Конвертируем PDF байты в изображения
             images = convert_from_bytes(
                 pdf_bytes,
-                dpi=300,
-                fmt='JPEG'
+                dpi=400,
+                fmt='JPEG',
+                thread_count=2,
+                grayscale=False,
+                strict=False
             )
 
             all_text = ""
@@ -171,13 +186,48 @@ class ParserPDF:
             config.logger.error(f"Ошибка обработки страницы {page_num + 1}: {e}")
             return ""
 
-    @staticmethod
-    def _preprocess_image(image: Image.Image) -> Image.Image:
+    def _preprocess_image(self, image: Image.Image) -> Image.Image:
         """Предобработка изображения для улучшения распознавания"""
         # PaddleOCR лучше работает с RGB, а не grayscale
         if image.mode != 'RGB':
             image = image.convert('RGB')
+
+        width, height = image.size
+        if width < 1200 or height < 1600:
+            # Увеличиваем размер для мелкого текста
+            new_width = max(width, 1200)
+            new_height = max(height, 1600)
+            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        # Увеличиваем контрастность
+        image = self._enhance_image(image)
+
         return image
+
+    def _enhance_image(self, image: Image.Image) -> Image.Image:
+        """Улучшение качества изображения для OCR"""
+        # Конвертируем PIL в OpenCV
+        img_cv = np.array(image)
+        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
+
+        # Увеличиваем резкость
+        kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
+        img_cv = cv2.filter2D(img_cv, -1, kernel)
+
+        # Увеличиваем контрастность с CLAHE
+        lab = cv2.cvtColor(img_cv, cv2.COLOR_BGR2LAB)
+        lab_planes = list(cv2.split(lab))
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        lab_planes[0] = clahe.apply(lab_planes[0])
+        lab = cv2.merge(lab_planes)
+        img_cv = cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)
+
+        # Дополнительное улучшение контраста
+        img_cv = cv2.convertScaleAbs(img_cv, alpha=1.2, beta=10)
+
+        # Конвертируем обратно в PIL
+        img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
+        return Image.fromarray(img_rgb)
 
     def _perform_ocr_paddle(self, image: Image.Image, page_num: int) -> str:
         """PaddleOCR с GPU ускорением"""
@@ -193,17 +243,85 @@ class ParserPDF:
             # Распознавание текста
             result = self.ocr.ocr(image_np, cls=True)
 
-            if result and result[0]:
-                texts = [line[1][0] for line in result[0]]
-                return '\n'.join(texts)
-            else:
-                config.logger.info(f"Текст не найден на странице {page_num + 1}")
-                return ""
+            return self._parse_ocr_result(result, page_num)
 
         except Exception as e:
             config.logger.error(f"PaddleOCR ошибка на странице {page_num + 1}: {e}")
             return ""
 
+    def _parse_ocr_result(self, result, page_num: int) -> str:
+        """Парсинг и постобработка результатов OCR"""
+        if not result or not result[0]:
+            config.logger.info(f"Текст не найден на странице {page_num + 1}")
+            return ""
+
+        try:
+            texts = []
+            confidences = []
+
+            for line in result[0]:
+                if line and len(line) >= 2:
+                    text = line[1][0]
+                    confidence = line[1][1]
+
+                    # Фильтруем по уверенности
+                    if confidence >= 0.7:  # Используем тот же порог что в drop_score
+                        texts.append(text)
+                        confidences.append(confidence)
+
+            if texts:
+                # Объединяем текст с учетом структуры
+                full_text = self._reconstruct_text(texts, result[0])
+                avg_confidence = sum(confidences) / len(confidences)
+                config.logger.info(
+                    f"Страница {page_num + 1}: распознано {len(texts)} строк, средняя уверенность: {avg_confidence:.3f}")
+                return full_text
+            else:
+                config.logger.info(f"На странице {page_num + 1} не найдено текста с достаточной уверенностью")
+                return ""
+
+        except Exception as e:
+            config.logger.error(f"Ошибка парсинга результатов OCR: {e}")
+            return ""
+
+    def _reconstruct_text(self, texts: List[str], raw_result: List) -> str:
+        """Восстановление структуры текста из результатов OCR"""
+        try:
+            # Сортируем строки по Y-координате (сверху вниз)
+            lines_with_pos = []
+            for line in raw_result:
+                if line and len(line) >= 2:
+                    points = line[0]
+                    text = line[1][0]
+                    # Берем среднюю Y-координату
+                    y_coord = sum(point[1] for point in points) / len(points)
+                    lines_with_pos.append((y_coord, text))
+
+            # Сортируем по Y-координате
+            lines_with_pos.sort(key=lambda x: x[0])
+
+            # Объединяем текст
+            reconstructed = []
+            current_line = []
+            last_y = None
+            y_threshold = 25  # Порог для определения новой строки
+
+            for y, text in lines_with_pos:
+                if last_y is None or abs(y - last_y) > y_threshold:
+                    if current_line:
+                        reconstructed.append(' '.join(current_line))
+                        current_line = []
+                current_line.append(text)
+                last_y = y
+
+            if current_line:
+                reconstructed.append(' '.join(current_line))
+
+            return '\n'.join(reconstructed)
+
+        except Exception as e:
+            config.logger.error(f"Ошибка восстановления текста: {e}")
+            return '\n'.join(texts)
 
     async def async_run(
             self,
