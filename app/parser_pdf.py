@@ -70,11 +70,11 @@ class ParserPDF:
 
                 # Улучшенные параметры детекции
                 det_db_thresh=0.3,
-                det_db_box_thresh=0.5,  # Увеличил для лучшего качества
-                det_db_unclip_ratio=2,  # Увеличил для лучшего охвата текста
+                det_db_box_thresh=0.6,  # Увеличил для лучшего качества
+                det_db_unclip_ratio=1.8,  # Увеличил для лучшего охвата текста
 
                 # Улучшенные параметры распознавания
-                rec_batch_num=2,  # Уменьшил для стабильности
+                rec_batch_num=4,  # Уменьшил для стабильности
                 drop_score=0.5,  # Повысил порог уверенности
 
                 # Дополнительные настройки
@@ -85,10 +85,10 @@ class ParserPDF:
                 # Специфичные настройки для русского языка
                 rec_char_type='ru',  # Явно указываем русский язык
                 cls_batch_num=4,
-                cls_thresh=0.8,
+                cls_thresh=0.6,
 
                 # Дополнительные улучшения
-                use_dilation=True,  # Расширение для детекции мелкого текста
+                use_dilation=False,  # Расширение для детекции мелкого текста
                 det_algorithm='DB',  # Явно указываем алгоритм детекции
             )
 
@@ -155,9 +155,9 @@ class ParserPDF:
             # Конвертируем PDF байты в изображения
             images = convert_from_bytes(
                 pdf_bytes,
-                dpi=500,
-                fmt='PNG',
-                thread_count=1,
+                dpi=300,
+                fmt='JPEG',
+                thread_count=2,
                 grayscale=True,
                 strict=False
             )
@@ -193,67 +193,65 @@ class ParserPDF:
 
     def _preprocess_image(self, image: Image.Image) -> Image.Image:
         """Предобработка изображения для улучшения распознавания"""
-        original_width, original_height = image.size
-        scale_factor = 1.0
+        if image.mode != 'L':
+            image = image.convert('L')
 
-        if original_width < 1500 or original_height < 2000:
-            scale_factor = max(1500 / original_width, 2000 / original_height, 1.5)
-            # Ограничиваем максимальное увеличение
-            scale_factor = min(scale_factor, 3.0)
+        original_width, original_height = image.size
+
+        target_min_size = 1200
+        if min(original_width, original_height) < target_min_size:
+            scale_factor = target_min_size / min(original_width, original_height)
+            scale_factor = min(scale_factor, 2.5)  # Ограничиваем увеличение
             new_width = int(original_width * scale_factor)
             new_height = int(original_height * scale_factor)
             image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            config.logger.info(f"Увеличен размер изображения в {scale_factor:.2f} раз")
+            config.logger.debug(f"Увеличен размер: {original_width}x{original_height} -> {new_width}x{new_height}")
 
-        # Увеличиваем контрастность
-        image = self._enhance_image(image)
+        # ✅ Применяем улучшения для Ч/Б изображения
+        return self._enhance_grayscale_image(image)
 
-        return image
+    def _enhance_grayscale_image(self, image: Image.Image) -> Image.Image:
+        """Специализированное улучшение для Ч/Б изображений"""
+        try:
+            # Конвертируем PIL в numpy array
+            img_np = np.array(image)
 
-    def _enhance_image(self, image: Image.Image) -> Image.Image:
-        """Улучшение качества изображения для OCR"""
-        # Конвертируем PIL в OpenCV
-        img_cv = np.array(image)
-        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
+            # 1. Убираем шум (только для grayscale)
+            img_denoised = cv2.medianBlur(img_np, 3)
 
-        # 1. Убираем шум
-        img_denoised = cv2.medianBlur(img_cv, 3)
+            # 2. Адаптивная бинаризация - КРИТИЧЕСКИ ВАЖНО для OCR
+            img_binary = cv2.adaptiveThreshold(
+                img_denoised,
+                255,
+                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                cv2.THRESH_BINARY,
+                15,  # Увеличил размер блока для лучшей адаптивности
+                5  # Смещение порога
+            )
 
-        # 2. Улучшаем резкость - более мягкое ядро для русского текста
-        kernel = np.array([[0, -0.5, 0], [-0.5, 3, -0.5], [0, -0.5, 0]])
-        img_sharpened = cv2.filter2D(img_denoised, -1, kernel)
+            # 3. Улучшаем резкость (только для бинарного изображения)
+            kernel = np.array([[0, -0.25, 0], [-0.25, 2, -0.25], [0, -0.25, 0]])
+            img_sharpened = cv2.filter2D(img_binary, -1, kernel)
 
-        # 3. Адаптивное улучшение контраста для текста
-        lab = cv2.cvtColor(img_sharpened, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
+            # 4. Морфологические операции для очистки текста
+            kernel_morph = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+            img_cleaned = cv2.morphologyEx(img_sharpened, cv2.MORPH_CLOSE, kernel_morph)
 
-        # CLAHE для улучшения контраста без артефактов
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        l_enhanced = clahe.apply(l)
+            # 5. Убираем мелкие шумы
+            img_final = cv2.medianBlur(img_cleaned, 2)
 
-        # Объединяем обратно
-        lab_enhanced = cv2.merge([l_enhanced, a, b])
-        img_contrast = cv2.cvtColor(lab_enhanced, cv2.COLOR_LAB2BGR)
+            return Image.fromarray(img_final)
 
-        # 4. Бинаризация для улучшения читаемости
-        gray = cv2.cvtColor(img_contrast, cv2.COLOR_BGR2GRAY)
-
-        # Адаптивный порог для разных условий освещения
-        binary = cv2.adaptiveThreshold(
-            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY, 11, 2
-        )
-
-        # Конвертируем обратно в цветное для PaddleOCR
-        img_final = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
-
-        # Конвертируем обратно в PIL
-        img_rgb = cv2.cvtColor(img_final, cv2.COLOR_BGR2RGB)
-        return Image.fromarray(img_rgb)
+        except Exception as e:
+            config.logger.error(f"Ошибка улучшения Ч/Б изображения: {e}")
+            return image
 
     def _perform_ocr_paddle(self, image: Image.Image, page_num: int) -> str:
         """Улучшенное распознавание с постобработкой"""
         try:
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+
             image_np = np.array(image)
 
             if image_np.size == 0:
@@ -261,7 +259,7 @@ class ParserPDF:
                 return ""
 
             # Распознавание с дополнительными параметрами
-            result = self.ocr.ocr(image_np, cls=True, bin=False, inv=False)
+            result = self.ocr.ocr(image_np, cls=True)
 
             # Постобработка результатов
             return self._parse_and_correct_ocr_result(result, page_num)
