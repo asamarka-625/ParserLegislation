@@ -70,26 +70,26 @@ class ParserPDF:
 
                 # Улучшенные параметры детекции
                 det_db_thresh=0.3,
-                det_db_box_thresh=0.6,  # Увеличил для лучшего качества
-                det_db_unclip_ratio=1.8,  # Увеличил для лучшего охвата текста
+                det_db_box_thresh=0.5,  # Увеличил для лучшего качества
+                det_db_unclip_ratio=1.5,  # Увеличил для лучшего охвата текста
 
                 # Улучшенные параметры распознавания
-                rec_batch_num=4,  # Уменьшил для стабильности
-                drop_score=0.5,  # Повысил порог уверенности
+                rec_batch_num=2,  # Уменьшил для стабильности
+                drop_score=0.3,  # Повысил порог уверенности
 
                 # Дополнительные настройки
                 det_limit_side_len=2048,  # Максимальный размер стороны для детекции
                 det_limit_type='max',  # Ограничение по максимальной стороне
-                rec_image_height=64,  # Высота изображения для распознавания
+                rec_image_height=48,  # Высота изображения для распознавания
 
                 # Специфичные настройки для русского языка
                 rec_char_type='ru',  # Явно указываем русский язык
-                cls_batch_num=4,
-                cls_thresh=0.6,
+                cls_batch_num=2,
+                cls_thresh=0.9,
 
                 # Дополнительные улучшения
-                use_dilation=False,  # Расширение для детекции мелкого текста
-                det_algorithm='DB',  # Явно указываем алгоритм детекции
+                det_algorithm='DB',
+                rec_algorithm='SVTR_LCNet'  # Явно указываем алгоритм
             )
 
             config.logger.info(f"PaddleOCR инициализирован, GPU: {use_gpu}")
@@ -148,30 +148,30 @@ class ParserPDF:
             return None
 
     def _extract_text_with_ocr_from_bytes(self, pdf_bytes: bytes) -> str:
-        """Извлечение текста с помощью OCR из PDF байтов"""
         try:
             config.logger.info("Конвертация PDF в изображения...")
 
-            # Конвертируем PDF байты в изображения
+            # Улучшенные параметры конвертации
             images = convert_from_bytes(
                 pdf_bytes,
-                dpi=300,
+                dpi=300,  # Хорошо
                 fmt='JPEG',
-                thread_count=2,
-                grayscale=True,
+                thread_count=1,  # Уменьшил для стабильности
+                grayscale=True,  # Уже делаем в предобработке
                 strict=False
             )
 
-            all_text = ""
+            all_text = []
 
             for i, image in enumerate(images):
                 config.logger.info(f"Обработка страницы {i + 1}/{len(images)}...")
 
                 # Обрабатываем изображение
                 page_text = self._process_image_async(image, i)
-                all_text += f"\n--- Страница {i + 1} ---\n{page_text}"
+                if page_text.strip():
+                    all_text.append(f"--- Страница {i + 1} ---\n{page_text}")
 
-            return all_text
+            return "\n\n".join(all_text)
 
         except Exception as e:
             config.logger.error(f"Ошибка OCR: {e}")
@@ -211,32 +211,17 @@ class ParserPDF:
         return self._enhance_grayscale_image(image)
 
     def _enhance_grayscale_image(self, image: Image.Image) -> Image.Image:
-        """Специализированное улучшение для Ч/Б изображений"""
         try:
-            # Конвертируем PIL в numpy array
             img_np = np.array(image)
 
-            # ✅ ПРОВЕРКА 1: Убедимся что изображение 2D (grayscale)
             if len(img_np.shape) > 2:
-                # Если изображение цветное, конвертируем в grayscale
                 img_np = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-                config.logger.warning("Изображение было цветным, сконвертировано в grayscale")
 
-            # ✅ ПРОВЕРКА 2: Убедимся что изображение не пустое
-            if img_np.size == 0:
-                config.logger.warning("Пустое изображение, возвращаем оригинал")
-                return image
+            # 1. Легкое подавление шума
+            img_denoised = cv2.medianBlur(img_np, 3)
 
-            # ✅ ПРОВЕРКА 3: Проверим тип данных
-            if img_np.dtype != np.uint8:
-                img_np = img_np.astype(np.uint8)
-
-            # 1. Убираем шум - используем НЕЧЕТНЫЙ размер ядра
-            img_denoised = cv2.medianBlur(img_np, 3)  # 3 - нечетное число
-
-            # 2. Адаптивная бинаризация с проверкой параметров
+            # 2. Адаптивная бинаризация - ФИНАЛЬНЫЙ шаг
             block_size = 15
-            # Блок должен быть нечетным и > 1
             if block_size % 2 == 0:
                 block_size += 1
 
@@ -245,25 +230,18 @@ class ParserPDF:
                 255,
                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                 cv2.THRESH_BINARY,
-                block_size,  # Гарантированно нечетное
-                5  # Смещение порога
+                block_size,
+                7  # Увеличил смещение для лучшего контраста
             )
 
-            # 3. Улучшаем резкость (только для бинарного изображения)
-            kernel = np.array([[0, -0.25, 0], [-0.25, 2, -0.25], [0, -0.25, 0]])
-            img_sharpened = cv2.filter2D(img_binary, -1, kernel)
-
-            # 4. Морфологические операции для очистки текста
-            kernel_morph = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-            img_cleaned = cv2.morphologyEx(img_sharpened, cv2.MORPH_CLOSE, kernel_morph)
-
-            # 5. Убираем мелкие шумы - снова НЕЧЕТНЫЙ размер ядра
-            img_final = cv2.medianBlur(img_cleaned, 3)  # Исправил на 3 (вместо 2)
+            # 3. ТОЛЬКО морфологическое закрытие для соединения разорванных символов
+            kernel_morph = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
+            img_final = cv2.morphologyEx(img_binary, cv2.MORPH_CLOSE, kernel_morph)
 
             return Image.fromarray(img_final)
 
         except Exception as e:
-            config.logger.error(f"Ошибка улучшения Ч/Б изображения: {e}")
+            config.logger.error(f"Ошибка улучшения изображения: {e}")
             return image
 
     def _perform_ocr_paddle(self, image: Image.Image, page_num: int) -> str:
@@ -334,36 +312,37 @@ class ParserPDF:
             return ""
 
     def _correct_russian_ocr_errors(self, text: str) -> str:
-        """Коррекция распространенных ошибок OCR для русского языка"""
+        """Более безопасная коррекция"""
         corrections = {
-            # Частые символов
-            '0': 'О', '1': 'І', '2': 'Z', '3': 'З',
-            '4': 'Ч', '5': 'Б', '6': 'б', '7': 'Т',
-            '8': 'В', '9': 'д',
-
-            # Английские и русские буквы
+            # Только очевидные замены букв
             'A': 'А', 'B': 'В', 'C': 'С', 'E': 'Е',
             'H': 'Н', 'K': 'К', 'M': 'М', 'O': 'О',
             'P': 'Р', 'T': 'Т', 'X': 'Х', 'Y': 'У',
             'a': 'а', 'c': 'с', 'e': 'е', 'o': 'о',
             'p': 'р', 'x': 'х', 'y': 'у',
 
-            # Частые опечатки в словах
-            'слъ': 'сле', 'тчк': 'тск', 'ьч': 'ьс'
+            # Только очевидные опечатки
+            'слъ': 'сле', 'тчк': 'тск'
         }
 
-        corrected_text = text
-        for wrong, correct in corrections.items():
-            corrected_text = corrected_text.replace(wrong, correct)
+        # Применяем замены только к буквенным контекстам
+        words = text.split()
+        corrected_words = []
 
-        return corrected_text
+        for word in words:
+            if word.isalpha():  # Только для слов из букв
+                for wrong, correct in corrections.items():
+                    word = word.replace(wrong, correct)
+            corrected_words.append(word)
+
+        return ' '.join(corrected_words)
 
     def _postprocess_russian_text(self, text: str) -> str:
         """Постобработка всего текста для улучшения качества"""
         # Исправляем частые проблемы с пробелами
         text = re.sub(r'\s+', ' ', text)  # Множественные пробелы
         text = re.sub(r'(\d)\s+(\d)', r'\1\2', text)  # Цифры разделенные пробелами
-        text = re.sub(r'([а-яё])\s+([а-яё])', r'\1\2', text)  # Разорванные слова
+        text = re.sub(r'([а-яё])\s{1,2}([а-яё])', r'\1\2', text)  # Разорванные слова
 
         # Восстанавливаем заглавные буквы в начале предложений
         sentences = re.split(r'([.!?])\s+', text)
@@ -383,12 +362,15 @@ class ParserPDF:
         return ' '.join(processed_sentences)
 
     def _reconstruct_text_with_layout(self, lines_data: List[dict]) -> str:
-        """Восстановление текста с учетом пространственного расположения"""
-        try:
-            # Группируем строки по Y-координатам
-            lines_data.sort(key=lambda x: x['bbox'][0][1])  # Сортировка по Y
+        """Улучшенное восстановление текста с учетом layout"""
+        if not lines_data:
+            return ""
 
-            reconstructed = []
+        try:
+            # Сортируем по Y-координате (сверху вниз)
+            lines_data.sort(key=lambda x: (x['bbox'][0][1], x['bbox'][0][0]))
+
+            paragraphs = []
             current_paragraph = []
             last_bottom = None
 
@@ -396,18 +378,20 @@ class ParserPDF:
                 bbox = line['bbox']
                 top = bbox[0][1]
 
-                if last_bottom is not None and top - last_bottom > 50:  # Новый параграф
+                # Определяем новый параграф по большому вертикальному отступу
+                if last_bottom is not None and top - last_bottom > 30:
                     if current_paragraph:
-                        reconstructed.append(' '.join(current_paragraph))
+                        paragraphs.append(' '.join(current_paragraph))
                         current_paragraph = []
 
                 current_paragraph.append(line['text'])
-                last_bottom = bbox[2][1]  # Нижняя координата bbox
+                last_bottom = bbox[2][1]  # bottom координата
 
+            # Добавляем последний параграф
             if current_paragraph:
-                reconstructed.append(' '.join(current_paragraph))
+                paragraphs.append(' '.join(current_paragraph))
 
-            return '\n'.join(reconstructed)
+            return '\n\n'.join(paragraphs)
 
         except Exception as e:
             config.logger.error(f"Ошибка восстановления структуры: {e}")
