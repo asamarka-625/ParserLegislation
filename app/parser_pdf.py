@@ -216,16 +216,36 @@ class ParserPDF:
             # Конвертируем PIL в numpy array
             img_np = np.array(image)
 
-            # 1. Убираем шум (только для grayscale)
-            img_denoised = cv2.medianBlur(img_np, 3)
+            # ✅ ПРОВЕРКА 1: Убедимся что изображение 2D (grayscale)
+            if len(img_np.shape) > 2:
+                # Если изображение цветное, конвертируем в grayscale
+                img_np = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+                config.logger.warning("Изображение было цветным, сконвертировано в grayscale")
 
-            # 2. Адаптивная бинаризация - КРИТИЧЕСКИ ВАЖНО для OCR
+            # ✅ ПРОВЕРКА 2: Убедимся что изображение не пустое
+            if img_np.size == 0:
+                config.logger.warning("Пустое изображение, возвращаем оригинал")
+                return image
+
+            # ✅ ПРОВЕРКА 3: Проверим тип данных
+            if img_np.dtype != np.uint8:
+                img_np = img_np.astype(np.uint8)
+
+            # 1. Убираем шум - используем НЕЧЕТНЫЙ размер ядра
+            img_denoised = cv2.medianBlur(img_np, 3)  # 3 - нечетное число
+
+            # 2. Адаптивная бинаризация с проверкой параметров
+            block_size = 15
+            # Блок должен быть нечетным и > 1
+            if block_size % 2 == 0:
+                block_size += 1
+
             img_binary = cv2.adaptiveThreshold(
                 img_denoised,
                 255,
                 cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                 cv2.THRESH_BINARY,
-                15,  # Увеличил размер блока для лучшей адаптивности
+                block_size,  # Гарантированно нечетное
                 5  # Смещение порога
             )
 
@@ -237,8 +257,8 @@ class ParserPDF:
             kernel_morph = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
             img_cleaned = cv2.morphologyEx(img_sharpened, cv2.MORPH_CLOSE, kernel_morph)
 
-            # 5. Убираем мелкие шумы
-            img_final = cv2.medianBlur(img_cleaned, 2)
+            # 5. Убираем мелкие шумы - снова НЕЧЕТНЫЙ размер ядра
+            img_final = cv2.medianBlur(img_cleaned, 3)  # Исправил на 3 (вместо 2)
 
             return Image.fromarray(img_final)
 
