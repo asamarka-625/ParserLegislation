@@ -280,13 +280,10 @@ class ParserPDF:
                     text = line[1][0]
                     confidence = line[1][1]
 
-                    # Применяем коррекцию для распространенных ошибок русского языка
-                    corrected_text = self._correct_russian_ocr_errors(text)
-
                     # Более низкий порог уверенности с последующей коррекцией
                     if confidence >= 0.4:
                         lines_with_data.append({
-                            'text': corrected_text,
+                            'text': text,
                             'confidence': confidence,
                             'bbox': line[0]
                         })
