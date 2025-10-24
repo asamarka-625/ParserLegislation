@@ -1,19 +1,16 @@
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu20.04
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
 WORKDIR /app
 
-# Обновляем список пакетов ПЕРВЫМ делом
-RUN apt-get update
-
-# Устанавливаем локаль (упрощенная версия)
+# Устанавливаем временную зону и локаль
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Moscow
-RUN apt-get install -y --no-install-recommends tzdata && \
-    ln -fs /usr/share/zoneinfo/Europe/Moscow /etc/localtime && \
-    dpkg-reconfigure --frontend noninteractive tzdata
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
 
-# Устанавливаем системные зависимости
-RUN apt-get install -y --no-install-recommends \
+# Обновляем и устанавливаем системные зависимости
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tzdata \
     poppler-utils \
     tesseract-ocr \
     tesseract-ocr-rus \
@@ -22,25 +19,27 @@ RUN apt-get install -y --no-install-recommends \
     python3.12-dev \
     python3.12-venv \
     python3.12-distutils \
+    wget \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxrender1 \
+    libxext6 \
+    ffmpeg \
+    && ln -fs /usr/share/zoneinfo/Europe/Moscow /etc/localtime \
+    && dpkg-reconfigure --frontend noninteractive tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-# Настраиваем локаль для Python (без пакета locales)
-ENV LANG C.UTF-8
-ENV LC_ALL C.UTF-8
+# Устанавливаем pip для Python 3.12
+RUN wget https://bootstrap.pypa.io/get-pip.py \
+    && python3.12 get-pip.py \
+    && rm get-pip.py
 
 # Копируем зависимости
 COPY requirements.txt .
 
-# Устанавливаем Python пакеты
-RUN python3.12 -m pip install --no-cache-dir -r requirements.txt
-
-# Устанавливаем libssl1.1 из репозитория Ubuntu 20.04
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    ca-certificates \
-    && wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2_amd64.deb \
-    && dpkg -i libssl1.1_1.1.1f-1ubuntu2_amd64.deb \
-    && rm libssl1.1_1.1.1f-1ubuntu2_amd64.deb
+# Устанавливаем Python зависимости
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Копируем код
 COPY . .

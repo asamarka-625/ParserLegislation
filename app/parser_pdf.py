@@ -52,11 +52,28 @@ class ParserPDF:
         try:
             use_gpu = torch.cuda.is_available()
             self.ocr = PaddleOCR(
-                use_angle_cls=True,
                 lang='ru',
-                use_gpu=use_gpu,
-                gpu_mem=1000,  # Лимит памяти GPU в MB
-                show_log=False  # ✅ Отключаем лишние логи PaddleOCR
+                use_angle_cls=False,  # определение ориентации текста
+                # det=True,  # детекция текста (включено по умолчанию)
+                # rec=True,  # распознавание текста (включено по умолчанию)
+                # cls=True,  # классификация ориентации
+
+                # Пути к моделям (опционально)
+                # det_model_dir='path/to/det/model',
+                # rec_model_dir='path/to/rec/model',
+                # cls_model_dir='path/to/cls/model',
+
+                # Производительность
+                use_gpu=True,  # использовать GPU если доступно
+
+                # Параметры детекции
+                det_db_thresh=0.3,
+                det_db_box_thresh=0.6,
+                det_db_unclip_ratio=1.5,
+
+                # Параметры распознавания
+                rec_batch_num=6,
+                drop_score=0.5  # минимальный порог уверенности
             )
             config.logger.info(f"PaddleOCR инициализирован, GPU: {use_gpu}")
 
