@@ -59,19 +59,63 @@ services:
   # Динамические воркеры (можно создать много)
   worker-1: &worker-template
     <<: *worker-config
-    command: python processing.py --worker-id=1 --total-workers=${TOTAL_WORKERS:-4}
+    command: python processing.py --worker-id=1 --total-workers=${TOTAL_WORKERS:-15}
 
   worker-2:
     <<: *worker-template
-    command: python processing.py --worker-id=2 --total-workers=${TOTAL_WORKERS:-4}
+    command: python processing.py --worker-id=2 --total-workers=${TOTAL_WORKERS:-15}
 
   worker-3:
     <<: *worker-template
-    command: python processing.py --worker-id=3 --total-workers=${TOTAL_WORKERS:-4}
+    command: python processing.py --worker-id=3 --total-workers=${TOTAL_WORKERS:-15}
 
   worker-4:
     <<: *worker-template
-    command: python processing.py --worker-id=4 --total-workers=${TOTAL_WORKERS:-4}
+    command: python processing.py --worker-id=4 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-5:
+    <<: *worker-template
+    command: python processing.py --worker-id=5 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-6:
+    <<: *worker-template
+    command: python processing.py --worker-id=6 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-7:
+    <<: *worker-template
+    command: python processing.py --worker-id=7 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-8:
+    <<: *worker-template
+    command: python processing.py --worker-id=8 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-9:
+    <<: *worker-template
+    command: python processing.py --worker-id=9 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-10:
+    <<: *worker-template
+    command: python processing.py --worker-id=10 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-11: &worker-template
+    <<: *worker-config
+    command: python processing.py --worker-id=11 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-12:
+    <<: *worker-template
+    command: python processing.py --worker-id=12 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-13:
+    <<: *worker-template
+    command: python processing.py --worker-id=13 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-14:
+    <<: *worker-template
+    command: python processing.py --worker-id=14 --total-workers=${TOTAL_WORKERS:-15}
+
+  worker-15:
+    <<: *worker-template
+    command: python processing.py --worker-id=15 --total-workers=${TOTAL_WORKERS:-15}
 
 volumes:
   postgres_data:
