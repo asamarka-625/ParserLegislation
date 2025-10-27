@@ -1,4 +1,5 @@
 # Внешние зависимости
+import re
 import psutil
 import os
 import resource
@@ -48,41 +49,6 @@ class ParserPDF:
             "User-Agent": self.ua.random
         }
 
-    def init_gpu(self):
-        """Инициализация EasyOCR с GPU"""
-        try:
-            use_gpu = torch.cuda.is_available()
-
-            # Инициализация EasyOCR для русского языка
-            self.reader = easyocr.Reader(
-                ['ru', 'en'],  # русский и английский языки
-                gpu=use_gpu,
-                download_enabled=True
-            )
-
-            config.logger.info(f"EasyOCR инициализирован, GPU: {use_gpu}")
-
-            if use_gpu:
-                gpu_name = torch.cuda.get_device_name(0)
-                config.logger.info(f"Используется GPU: {gpu_name}")
-
-        except Exception as e:
-            config.logger.error(f"Ошибка инициализации EasyOCR: {e}")
-            self.reader = None
-
-    def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
-        """Основной метод извлечения текста из PDF"""
-        try:
-            if self.reader is None:
-                config.logger.error("EasyOCR не инициализирован")
-                return None
-
-            return self._extract_text_with_ocr_from_bytes(pdf_bytes)
-
-        except Exception as e:
-            config.logger.error(f"Ошибка при извлечении текста: {e}")
-            return None
-
     async def get_async_response(
             self,
             url: str,
@@ -114,28 +80,73 @@ class ParserPDF:
             config.logger.error(f"Неожиданная ошибка для {url}: {type(err).__name__}: {err}")
             raise
 
+    def init_gpu(self):
+        """Инициализация EasyOCR с GPU"""
+        try:
+            use_gpu = torch.cuda.is_available()
+
+            # Инициализация EasyOCR для русского языка с оптимизацией для GPU
+            self.reader = easyocr.Reader(
+                ['ru', 'en'],  # русский и английский языки
+                gpu=use_gpu,
+                download_enabled=True,
+                model_storage_directory=None,
+                user_network_directory=None
+            )
+
+            config.logger.info(f"EasyOCR инициализирован, GPU: {use_gpu}")
+
+            if use_gpu:
+                gpu_name = torch.cuda.get_device_name(0)
+                config.logger.info(f"Используется GPU: {gpu_name}")
+                # Оптимизация для CUDA
+                torch.backends.cudnn.benchmark = True
+                torch.backends.cuda.matmul.allow_tf32 = True
+                torch.backends.cudnn.allow_tf32 = True
+
+        except Exception as e:
+            config.logger.error(f"Ошибка инициализации EasyOCR: {e}")
+            self.reader = None
+
+    def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
+        """Основной метод извлечения текста из PDF"""
+        try:
+            if self.reader is None:
+                config.logger.error("EasyOCR не инициализирован")
+                return None
+
+            return self._extract_text_with_ocr_from_bytes(pdf_bytes)
+
+        except Exception as e:
+            config.logger.error(f"Ошибка при извлечении текста: {e}")
+            return None
+
     def _extract_text_with_ocr_from_bytes(self, pdf_bytes: bytes) -> str:
-        """Конвертация PDF и обработка каждой страницы"""
+        """Конвертация PDF и обработка каждой страницы с оптимизацией для GPU"""
         try:
             config.logger.info("Конвертация PDF в изображения...")
 
-            # Конвертация PDF в изображения с высоким DPI для сканов
+            # Конвертация PDF в изображения с оптимизированными параметрами
             images = convert_from_bytes(
                 pdf_bytes,
-                dpi=300,  # Высокий DPI для качественных сканов
-                fmt='JPEG'
+                dpi=250,  # Снизил DPI для скорости, качество остается хорошим
+                fmt='JPEG',
+                thread_count=4,  # Увеличил количество потоков
+                use_pdftocairo=True,  # Более быстрый рендерер
+                strict=False
             )
 
             all_text = []
 
+            # Обрабатываем все изображения последовательно для максимальной скорости GPU
             for i, image in enumerate(images):
                 config.logger.info(f"Обработка страницы {i + 1}/{len(images)}...")
 
-                # Оптимизация изображения для OCR
-                processed_image = self._optimize_image_for_ocr(image)
+                # Быстрая оптимизация изображения
+                processed_image = self._fast_optimize_image(image)
 
-                # Распознавание текста
-                page_text = self._perform_ocr_easy(processed_image, i)
+                # Распознавание текста с увеличенным batch_size
+                page_text = self._perform_ocr_easy_fast(processed_image, i)
                 if page_text.strip():
                     all_text.append(f"--- Страница {i + 1} ---\n{page_text}")
 
@@ -145,72 +156,71 @@ class ParserPDF:
             config.logger.error(f"Ошибка OCR: {e}")
             return ""
 
-    def _optimize_image_for_ocr(self, image: Image.Image) -> Image.Image:
-        """Оптимизация изображения для улучшения распознавания сканов"""
+    def _fast_optimize_image(self, image: Image.Image) -> Image.Image:
+        """Быстрая оптимизация изображения для GPU"""
         try:
-            # Конвертация в grayscale
+            # Быстрая конвертация в grayscale
             if image.mode != 'L':
                 image = image.convert('L')
 
-            # Увеличение разрешения для мелкого текста
             original_width, original_height = image.size
 
-            # Увеличиваем изображение если оно слишком маленькое для скана
-            if max(original_width, original_height) < 2000:
-                scale_factor = 2000 / max(original_width, original_height)
+            # Быстрое увеличение разрешения только если действительно нужно
+            if max(original_width, original_height) < 1600:  # Снизил порог
+                scale_factor = min(2000 / max(original_width, original_height), 2.0)
                 new_width = int(original_width * scale_factor)
                 new_height = int(original_height * scale_factor)
                 image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-            # Улучшение контраста и резкости
+            # Быстрая обработка через OpenCV
             img_np = np.array(image)
 
-            # Контрастное растяжение
-            min_val = np.percentile(img_np, 2)
-            max_val = np.percentile(img_np, 98)
-            img_contrast = np.clip((img_np - min_val) * 255.0 / (max_val - min_val), 0, 255).astype(np.uint8)
+            # Быстрое улучшение контраста
+            img_contrast = cv2.convertScaleAbs(img_np, alpha=1.2, beta=0)
 
-            # Легкое шумоподавление
-            img_denoised = cv2.medianBlur(img_contrast, 3)
+            # Быстрое шумоподавление
+            img_denoised = cv2.medianBlur(img_contrast, 1)  # Уменьшил ядро
 
-            # Увеличение резкости
-            kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
-            img_sharp = cv2.filter2D(img_denoised, -1, kernel)
-
-            return Image.fromarray(img_sharp)
+            return Image.fromarray(img_denoised)
 
         except Exception as e:
             config.logger.error(f"Ошибка оптимизации изображения: {e}")
             return image
 
-    def _perform_ocr_easy(self, image: Image.Image, page_num: int) -> str:
-        """Распознавание текста с помощью EasyOCR"""
+    def _perform_ocr_easy_fast(self, image: Image.Image, page_num: int) -> str:
+        """Быстрое распознавание текста с оптимизацией для GPU"""
         try:
-            # Конвертируем в RGB для EasyOCR
+            # Быстрая конвертация в RGB
             if image.mode != 'RGB':
                 image = image.convert('RGB')
 
             image_np = np.array(image)
 
-            # Распознавание текста с параметрами для сканов
+            # Оптимизированные параметры для мощной видеокарты
             results = self.reader.readtext(
                 image_np,
-                batch_size=4,  # Оптимально для GPU
-                paragraph=True,  # Группировка в параграфы
+                batch_size=16,  # Увеличил для заполнения GPU
+                paragraph=False,  # Отключил для скорости, обработаем сами
                 detail=1,
-                contrast_ths=0.3,  # Порог контраста
-                adjust_contrast=0.7,  # Автоконтраст
-                width_ths=0.8  # Ширина для объединения текста
+                contrast_ths=0.1,  # Снизил пороги для большей чувствительности
+                adjust_contrast=0.5,
+                width_ths=0.7,
+                decoder='greedy',  # Более быстрый декодер
+                beamWidth=1,  # Минимальное значение для скорости
+                min_size=2,  # Минимальный размер текста
+                text_threshold=0.4,  # Более низкий порог
+                link_threshold=0.4,
+                mag_ratio=1.0  # Без увеличения
             )
 
-            return self._parse_easyocr_results(results, page_num)
+            return self._parse_easyocr_results_fast(results, page_num)
 
         except Exception as e:
             config.logger.error(f"EasyOCR ошибка на странице {page_num + 1}: {e}")
             return ""
 
-    def _parse_easyocr_results(self, results, page_num: int) -> str:
-        """Обработка и фильтрация результатов EasyOCR"""
+    def _parse_easyocr_results_fast(self, results, page_num: int) -> str:
+        """Быстрая обработка результатов EasyOCR"""
         if not results:
             config.logger.info(f"Текст не найден на странице {page_num + 1}")
             return ""
@@ -221,21 +231,21 @@ class ParserPDF:
 
             for result in results:
                 try:
-                    # Обрабатываем оба возможных формата результатов EasyOCR
                     if len(result) == 3:
-                        # Формат: (bbox, text, confidence)
                         bbox, text, confidence = result
                     elif len(result) == 2:
-                        # Формат: (bbox, text) - без confidence
                         bbox, text = result
-                        confidence = 0.8  # Значение по умолчанию
+                        confidence = 0.7  # Понизил значение по умолчанию
                     else:
-                        config.logger.warning(f"Неизвестный формат результата: {result}")
                         continue
 
-                    # Фильтрация по уверенности и длине текста
                     text = str(text).strip() if text else ""
-                    if confidence >= 0.6 and len(text) >= 2:
+
+                    # Быстрая замена символов
+                    text = self._fast_replace_symbols(text)
+
+                    # Более низкий порог уверенности для скорости
+                    if confidence >= 0.5 and len(text) >= 1:  # Снизил требования
                         valid_lines.append({
                             'text': text,
                             'confidence': confidence,
@@ -244,12 +254,11 @@ class ParserPDF:
                         total_confidence += confidence
 
                 except Exception as e:
-                    config.logger.warning(f"Ошибка обработки строки результата: {e}, result: {result}")
-                    continue
+                    continue  # Пропускаем ошибки для скорости
 
             if valid_lines:
-                # Восстановление структуры документа
-                final_text = self._reconstruct_document_structure(valid_lines)
+                # Быстрое восстановление структуры
+                final_text = self._fast_reconstruct_structure(valid_lines)
 
                 avg_confidence = total_confidence / len(valid_lines)
                 config.logger.info(
@@ -257,21 +266,45 @@ class ParserPDF:
 
                 return final_text
             else:
-                config.logger.info(f"На странице {page_num + 1} не найдено качественного текста")
                 return ""
 
         except Exception as e:
             config.logger.error(f"Ошибка парсинга результатов EasyOCR: {e}")
             return ""
 
-    def _reconstruct_document_structure(self, lines_data: List[dict]) -> str:
-        """Восстановление структуры документа с учетом layout"""
+    @staticmethod
+    def _fast_replace_symbols(text: str) -> str:
+        """Быстрая замена символов Ng и N на №"""
+        if not text:
+            return text
+
+        # Быстрые строковые замены вместо regex
+        text = text.replace('Ng ', '№ ')
+        text = text.replace('N ', '№ ')
+        text = text.replace('Ng-', '№-')
+        text = text.replace('N-', '№-')
+
+        # Быстрая замена через цикл для комбинаций
+        words = text.split()
+        for i, word in enumerate(words):
+            if word.upper() in ['NG', 'N'] and i + 1 < len(words) and words[i + 1].isdigit():
+                words[i] = '№'
+            elif word.startswith('Ng') and word[2:].isdigit():
+                words[i] = '№ ' + word[2:]
+            elif word.startswith('N') and word[1:].isdigit():
+                words[i] = '№ ' + word[1:]
+
+        return ' '.join(words)
+
+    @staticmethod
+    def _fast_reconstruct_structure(lines_data: List[dict]) -> str:
+        """Быстрое восстановление структуры документа"""
         if not lines_data:
             return ""
 
         try:
-            # Сортируем строки по вертикальной позиции
-            lines_data.sort(key=lambda x: (x['bbox'][0][1], x['bbox'][0][0]))
+            # Быстрая сортировка
+            lines_data.sort(key=lambda x: x['bbox'][0][1])
 
             paragraphs = []
             current_block = []
@@ -281,17 +314,15 @@ class ParserPDF:
                 bbox = line['bbox']
                 current_top = bbox[0][1]
 
-                # Определяем новый блок если большой вертикальный отступ
-                if previous_bottom is not None and current_top - previous_bottom > 25:
+                if previous_bottom is not None and current_top - previous_bottom > 20:  # Уменьшил отступ
                     if current_block:
                         paragraph_text = ' '.join(current_block)
                         paragraphs.append(paragraph_text)
                         current_block = []
 
                 current_block.append(line['text'])
-                previous_bottom = bbox[2][1]  # Нижняя координата
+                previous_bottom = bbox[2][1]
 
-            # Добавляем последний блок
             if current_block:
                 paragraph_text = ' '.join(current_block)
                 paragraphs.append(paragraph_text)
@@ -299,8 +330,7 @@ class ParserPDF:
             return '\n\n'.join(paragraphs)
 
         except Exception as e:
-            config.logger.error(f"Ошибка восстановления структуры: {e}")
-            # Возвращаем простой объединенный текст в случае ошибки
+            # Возвращаем простой текст в случае ошибки
             return ' '.join(item['text'] for item in lines_data)
 
     async def async_run(
