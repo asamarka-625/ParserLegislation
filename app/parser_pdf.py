@@ -1,7 +1,6 @@
 # Внешние зависимости
 import psutil
 import os
-import re
 import resource
 from typing import Optional, List, Tuple
 import asyncio
@@ -9,7 +8,7 @@ from PIL import Image
 from pdf2image import convert_from_bytes
 from fake_useragent import UserAgent
 import httpx
-from paddleocr import PaddleOCR
+import easyocr
 import torch
 import numpy as np
 import cv2
@@ -50,57 +49,39 @@ class ParserPDF:
         }
 
     def init_gpu(self):
-        """Инициализация PaddleOCR с GPU"""
+        """Инициализация EasyOCR с GPU"""
         try:
             use_gpu = torch.cuda.is_available()
-            self.ocr = PaddleOCR(
-                lang='ru',
-                use_angle_cls=True,  # определение ориентации текста
-                # det=True,  # детекция текста (включено по умолчанию)
-                # rec=True,  # распознавание текста (включено по умолчанию)
-                # cls=True,  # классификация ориентации
 
-                # Пути к моделям (опционально)
-                # det_model_dir='path/to/det/model',
-                # rec_model_dir='path/to/rec/model',
-                # cls_model_dir='path/to/cls/model',
-
-                # Производительность
-                use_gpu=True,  # использовать GPU если доступно
-
-                # Улучшенные параметры детекции
-                det_db_thresh=0.3,
-                det_db_box_thresh=0.5,  # Увеличил для лучшего качества
-                det_db_unclip_ratio=1.5,  # Увеличил для лучшего охвата текста
-
-                # Улучшенные параметры распознавания
-                rec_batch_num=2,  # Уменьшил для стабильности
-                drop_score=0.3,  # Повысил порог уверенности
-
-                # Дополнительные настройки
-                det_limit_side_len=2048,  # Максимальный размер стороны для детекции
-                det_limit_type='max',  # Ограничение по максимальной стороне
-                rec_image_height=48,  # Высота изображения для распознавания
-
-                # Специфичные настройки для русского языка
-                rec_char_type='ru',  # Явно указываем русский язык
-                cls_batch_num=2,
-                cls_thresh=0.9,
-
-                # Дополнительные улучшения
-                det_algorithm='DB',
-                rec_algorithm='SVTR_LCNet'  # Явно указываем алгоритм
+            # Инициализация EasyOCR для русского языка
+            self.reader = easyocr.Reader(
+                ['ru', 'en'],  # русский и английский языки
+                gpu=use_gpu,
+                download_enabled=True
             )
 
-            config.logger.info(f"PaddleOCR инициализирован, GPU: {use_gpu}")
+            config.logger.info(f"EasyOCR инициализирован, GPU: {use_gpu}")
 
             if use_gpu:
                 gpu_name = torch.cuda.get_device_name(0)
                 config.logger.info(f"Используется GPU: {gpu_name}")
 
         except Exception as e:
-            config.logger.error(f"Ошибка инициализации PaddleOCR: {e}")
-            self.ocr = None
+            config.logger.error(f"Ошибка инициализации EasyOCR: {e}")
+            self.reader = None
+
+    def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
+        """Основной метод извлечения текста из PDF"""
+        try:
+            if self.reader is None:
+                config.logger.error("EasyOCR не инициализирован")
+                return None
+
+            return self._extract_text_with_ocr_from_bytes(pdf_bytes)
+
+        except Exception as e:
+            config.logger.error(f"Ошибка при извлечении текста: {e}")
+            return None
 
     async def get_async_response(
             self,
@@ -133,32 +114,16 @@ class ParserPDF:
             config.logger.error(f"Неожиданная ошибка для {url}: {type(err).__name__}: {err}")
             raise
 
-    def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
-        try:
-            # Проверяем что OCR инициализирован
-            if self.ocr is None:
-                config.logger.error("PaddleOCR не инициализирован")
-                return None
-
-            ocr_text = self._extract_text_with_ocr_from_bytes(pdf_bytes)
-            return ocr_text
-
-        except Exception as e:
-            config.logger.error(f"Ошибка при извлечении текста: {e}")
-            return None
-
     def _extract_text_with_ocr_from_bytes(self, pdf_bytes: bytes) -> str:
+        """Конвертация PDF и обработка каждой страницы"""
         try:
             config.logger.info("Конвертация PDF в изображения...")
 
-            # Улучшенные параметры конвертации
+            # Конвертация PDF в изображения с высоким DPI для сканов
             images = convert_from_bytes(
                 pdf_bytes,
-                dpi=300,  # Хорошо
-                fmt='JPEG',
-                thread_count=1,  # Уменьшил для стабильности
-                grayscale=True,  # Уже делаем в предобработке
-                strict=False
+                dpi=300,  # Высокий DPI для качественных сканов
+                fmt='JPEG'
             )
 
             all_text = []
@@ -166,8 +131,11 @@ class ParserPDF:
             for i, image in enumerate(images):
                 config.logger.info(f"Обработка страницы {i + 1}/{len(images)}...")
 
-                # Обрабатываем изображение
-                page_text = self._process_image_async(image, i)
+                # Оптимизация изображения для OCR
+                processed_image = self._optimize_image_for_ocr(image)
+
+                # Распознавание текста
+                page_text = self._perform_ocr_easy(processed_image, i)
                 if page_text.strip():
                     all_text.append(f"--- Страница {i + 1} ---\n{page_text}")
 
@@ -177,168 +145,144 @@ class ParserPDF:
             config.logger.error(f"Ошибка OCR: {e}")
             return ""
 
-    def _process_image_async(self, image: Image.Image, page_num: int) -> str:
-        """Обработка одного изображения"""
+    def _optimize_image_for_ocr(self, image: Image.Image) -> Image.Image:
+        """Оптимизация изображения для улучшения распознавания сканов"""
         try:
-            # Предобработка изображения
-            processed_image = self._preprocess_image(image)
+            # Конвертация в grayscale
+            if image.mode != 'L':
+                image = image.convert('L')
 
-            # OCR распознавание
-            page_text = self._perform_ocr_paddle(processed_image, page_num)
-            return page_text
+            # Увеличение разрешения для мелкого текста
+            original_width, original_height = image.size
 
-        except Exception as e:
-            config.logger.error(f"Ошибка обработки страницы {page_num + 1}: {e}")
-            return ""
+            # Увеличиваем изображение если оно слишком маленькое для скана
+            if max(original_width, original_height) < 2000:
+                scale_factor = 2000 / max(original_width, original_height)
+                new_width = int(original_width * scale_factor)
+                new_height = int(original_height * scale_factor)
+                image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
-    def _preprocess_image(self, image: Image.Image) -> Image.Image:
-        """Предобработка изображения для улучшения распознавания"""
-        if image.mode != 'L':
-            image = image.convert('L')
-
-        original_width, original_height = image.size
-
-        target_min_size = 1200
-        if min(original_width, original_height) < target_min_size:
-            scale_factor = target_min_size / min(original_width, original_height)
-            scale_factor = min(scale_factor, 2.5)  # Ограничиваем увеличение
-            new_width = int(original_width * scale_factor)
-            new_height = int(original_height * scale_factor)
-            image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-            config.logger.debug(f"Увеличен размер: {original_width}x{original_height} -> {new_width}x{new_height}")
-
-        # ✅ Применяем улучшения для Ч/Б изображения
-        return self._enhance_grayscale_image(image)
-
-    def _enhance_grayscale_image(self, image: Image.Image) -> Image.Image:
-        try:
+            # Улучшение контраста и резкости
             img_np = np.array(image)
 
-            if len(img_np.shape) > 2:
-                img_np = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+            # Контрастное растяжение
+            min_val = np.percentile(img_np, 2)
+            max_val = np.percentile(img_np, 98)
+            img_contrast = np.clip((img_np - min_val) * 255.0 / (max_val - min_val), 0, 255).astype(np.uint8)
 
-            # 1. Легкое подавление шума
-            img_denoised = cv2.medianBlur(img_np, 3)
+            # Легкое шумоподавление
+            img_denoised = cv2.medianBlur(img_contrast, 3)
 
-            # 2. Адаптивная бинаризация - ФИНАЛЬНЫЙ шаг
-            block_size = 15
-            if block_size % 2 == 0:
-                block_size += 1
+            # Увеличение резкости
+            kernel = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
+            img_sharp = cv2.filter2D(img_denoised, -1, kernel)
 
-            img_binary = cv2.adaptiveThreshold(
-                img_denoised,
-                255,
-                cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                cv2.THRESH_BINARY,
-                block_size,
-                7  # Увеличил смещение для лучшего контраста
-            )
-
-            # 3. ТОЛЬКО морфологическое закрытие для соединения разорванных символов
-            kernel_morph = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 1))
-            img_final = cv2.morphologyEx(img_binary, cv2.MORPH_CLOSE, kernel_morph)
-
-            return Image.fromarray(img_final)
+            return Image.fromarray(img_sharp)
 
         except Exception as e:
-            config.logger.error(f"Ошибка улучшения изображения: {e}")
+            config.logger.error(f"Ошибка оптимизации изображения: {e}")
             return image
 
-    def _perform_ocr_paddle(self, image: Image.Image, page_num: int) -> str:
-        """Улучшенное распознавание с постобработкой"""
+    def _perform_ocr_easy(self, image: Image.Image, page_num: int) -> str:
+        """Распознавание текста с помощью EasyOCR"""
         try:
+            # Конвертируем в RGB для EasyOCR
             if image.mode != 'RGB':
                 image = image.convert('RGB')
 
             image_np = np.array(image)
 
-            if image_np.size == 0:
-                config.logger.warning(f"Пустое изображение на странице {page_num + 1}")
-                return ""
+            # Распознавание текста с параметрами для сканов
+            results = self.reader.readtext(
+                image_np,
+                batch_size=4,  # Оптимально для GPU
+                paragraph=True,  # Группировка в параграфы
+                detail=1,
+                contrast_ths=0.3,  # Порог контраста
+                adjust_contrast=0.7,  # Автоконтраст
+                width_ths=0.8  # Ширина для объединения текста
+            )
 
-            # Распознавание с дополнительными параметрами
-            result = self.ocr.ocr(image_np, cls=True)
-
-            # Постобработка результатов
-            return self._parse_and_correct_ocr_result(result, page_num)
+            return self._parse_easyocr_results(results, page_num)
 
         except Exception as e:
-            config.logger.error(f"PaddleOCR ошибка на странице {page_num + 1}: {e}")
+            config.logger.error(f"EasyOCR ошибка на странице {page_num + 1}: {e}")
             return ""
 
-    def _parse_and_correct_ocr_result(self, result, page_num: int) -> str:
-        """Парсинг и коррекция результатов OCR для русского языка"""
-        if not result or not result[0]:
+    def _parse_easyocr_results(self, results, page_num: int) -> str:
+        """Обработка и фильтрация результатов EasyOCR"""
+        if not results:
             config.logger.info(f"Текст не найден на странице {page_num + 1}")
             return ""
 
         try:
-            lines_with_data = []
+            valid_lines = []
+            total_confidence = 0
 
-            for line in result[0]:
-                if line and len(line) >= 2:
-                    text = line[1][0]
-                    confidence = line[1][1]
+            for (bbox, text, confidence) in results:
+                # Фильтрация по уверенности и длине текста
+                if confidence >= 0.6 and len(text.strip()) >= 2:
+                    valid_lines.append({
+                        'text': text.strip(),
+                        'confidence': confidence,
+                        'bbox': bbox
+                    })
+                    total_confidence += confidence
 
-                    # Более низкий порог уверенности с последующей коррекцией
-                    if confidence >= 0.4:
-                        lines_with_data.append({
-                            'text': text,
-                            'confidence': confidence,
-                            'bbox': line[0]
-                        })
+            if valid_lines:
+                # Восстановление структуры документа
+                final_text = self._reconstruct_document_structure(valid_lines)
 
-            if lines_with_data:
-                # Восстанавливаем структуру с учетом координат
-                final_text = self._reconstruct_text_with_layout(lines_with_data)
-
-                avg_confidence = sum(item['confidence'] for item in lines_with_data) / len(lines_with_data)
+                avg_confidence = total_confidence / len(valid_lines)
                 config.logger.info(
-                    f"Страница {page_num + 1}: {len(lines_with_data)} строк, уверенность: {avg_confidence:.3f}")
+                    f"Страница {page_num + 1}: {len(valid_lines)} строк, уверенность: {avg_confidence:.3f}")
 
                 return final_text
             else:
-                config.logger.info(f"На странице {page_num + 1} не найдено текста")
+                config.logger.info(f"На странице {page_num + 1} не найдено качественного текста")
                 return ""
 
         except Exception as e:
-            config.logger.error(f"Ошибка парсинга результатов OCR: {e}")
+            config.logger.error(f"Ошибка парсинга результатов EasyOCR: {e}")
             return ""
 
-    def _reconstruct_text_with_layout(self, lines_data: List[dict]) -> str:
-        """Улучшенное восстановление текста с учетом layout"""
+    def _reconstruct_document_structure(self, lines_data: List[dict]) -> str:
+        """Восстановление структуры документа с учетом layout"""
         if not lines_data:
             return ""
 
         try:
-            # Сортируем по Y-координате (сверху вниз)
+            # Сортируем строки по вертикальной позиции
             lines_data.sort(key=lambda x: (x['bbox'][0][1], x['bbox'][0][0]))
 
             paragraphs = []
-            current_paragraph = []
-            last_bottom = None
+            current_block = []
+            previous_bottom = None
 
             for line in lines_data:
                 bbox = line['bbox']
-                top = bbox[0][1]
+                current_top = bbox[0][1]
 
-                # Определяем новый параграф по большому вертикальному отступу
-                if last_bottom is not None and top - last_bottom > 30:
-                    if current_paragraph:
-                        paragraphs.append(' '.join(current_paragraph))
-                        current_paragraph = []
+                # Определяем новый блок если большой вертикальный отступ
+                if previous_bottom is not None and current_top - previous_bottom > 25:
+                    if current_block:
+                        paragraph_text = ' '.join(current_block)
+                        paragraphs.append(paragraph_text)
+                        current_block = []
 
-                current_paragraph.append(line['text'])
-                last_bottom = bbox[2][1]  # bottom координата
+                current_block.append(line['text'])
+                previous_bottom = bbox[2][1]  # Нижняя координата
 
-            # Добавляем последний параграф
-            if current_paragraph:
-                paragraphs.append(' '.join(current_paragraph))
+            # Добавляем последний блок
+            if current_block:
+                paragraph_text = ' '.join(current_block)
+                paragraphs.append(paragraph_text)
 
             return '\n\n'.join(paragraphs)
 
         except Exception as e:
             config.logger.error(f"Ошибка восстановления структуры: {e}")
+            # Возвращаем простой объединенный текст в случае ошибки
             return ' '.join(item['text'] for item in lines_data)
 
     async def async_run(
