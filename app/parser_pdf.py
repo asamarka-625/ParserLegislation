@@ -219,15 +219,33 @@ class ParserPDF:
             valid_lines = []
             total_confidence = 0
 
-            for (bbox, text, confidence) in results:
-                # Фильтрация по уверенности и длине текста
-                if confidence >= 0.6 and len(text.strip()) >= 2:
-                    valid_lines.append({
-                        'text': text.strip(),
-                        'confidence': confidence,
-                        'bbox': bbox
-                    })
-                    total_confidence += confidence
+            for result in results:
+                try:
+                    # Обрабатываем оба возможных формата результатов EasyOCR
+                    if len(result) == 3:
+                        # Формат: (bbox, text, confidence)
+                        bbox, text, confidence = result
+                    elif len(result) == 2:
+                        # Формат: (bbox, text) - без confidence
+                        bbox, text = result
+                        confidence = 0.8  # Значение по умолчанию
+                    else:
+                        config.logger.warning(f"Неизвестный формат результата: {result}")
+                        continue
+
+                    # Фильтрация по уверенности и длине текста
+                    text = str(text).strip() if text else ""
+                    if confidence >= 0.6 and len(text) >= 2:
+                        valid_lines.append({
+                            'text': text,
+                            'confidence': confidence,
+                            'bbox': bbox
+                        })
+                        total_confidence += confidence
+
+                except Exception as e:
+                    config.logger.warning(f"Ошибка обработки строки результата: {e}, result: {result}")
+                    continue
 
             if valid_lines:
                 # Восстановление структуры документа
