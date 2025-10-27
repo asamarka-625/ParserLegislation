@@ -1,5 +1,4 @@
 # Внешние зависимости
-import re
 import psutil
 import os
 import resource
@@ -279,22 +278,12 @@ class ParserPDF:
             return text
 
         # Быстрые строковые замены вместо regex
-        text = text.replace('Ng ', '№ ')
-        text = text.replace('N ', '№ ')
-        text = text.replace('Ng-', '№-')
-        text = text.replace('N-', '№-')
+        text = text.replace('Ng', '№')
+        text = text.replace('Jg', '№')
+        text = text.replace('N', '№')
+        text = text.replace('J', '№')
 
-        # Быстрая замена через цикл для комбинаций
-        words = text.split()
-        for i, word in enumerate(words):
-            if word.upper() in ['NG', 'N'] and i + 1 < len(words) and words[i + 1].isdigit():
-                words[i] = '№'
-            elif word.startswith('Ng') and word[2:].isdigit():
-                words[i] = '№ ' + word[2:]
-            elif word.startswith('N') and word[1:].isdigit():
-                words[i] = '№ ' + word[1:]
-
-        return ' '.join(words)
+        return text
 
     @staticmethod
     def _fast_reconstruct_structure(lines_data: List[dict]) -> str:
