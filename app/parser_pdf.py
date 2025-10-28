@@ -5,6 +5,8 @@ import os
 import resource
 from typing import Optional, List, Tuple
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from queue import Queue, Empty
 from PIL import Image
 from pdf2image import convert_from_bytes
 from fake_useragent import UserAgent
@@ -80,7 +82,7 @@ class ParserPDF:
             config.logger.error(f"Неожиданная ошибка для {url}: {type(err).__name__}: {err}")
             raise
 
-    def init_gpu(self):
+    def init_gpu(self, y_tolerance: int = 50):
         """Инициализация EasyOCR с GPU"""
         try:
             use_gpu = torch.cuda.is_available()
@@ -104,9 +106,115 @@ class ParserPDF:
                 torch.backends.cuda.matmul.allow_tf32 = True
                 torch.backends.cudnn.allow_tf32 = True
 
+            self.y_tolerance = y_tolerance
+
         except Exception as e:
             config.logger.error(f"Ошибка инициализации EasyOCR: {e}")
             self.reader = None
+
+    def conveyor_extract_text_from_pdf_bytes(self, data, max_workers: int = 4):
+        def preprocess_worker(input_queue, output_queue):
+            while True:
+                pdf_bytes = input_queue.get()
+                if pdf_bytes is None:  # Сигнал остановки
+                    break
+
+                images = convert_from_bytes(
+                    pdf_bytes,
+                    dpi=250,  # Снизил DPI для скорости, качество остается хорошим
+                    fmt='JPEG',
+                    thread_count=4,  # Увеличил количество потоков
+                    use_pdftocairo=True,  # Более быстрый рендерер
+                    strict=False
+                )
+                for page_num, image in enumerate(images):
+                    processed = self._fast_optimize_image(image)
+                    output_queue.put({
+                        'page_num': page_num,  # Номер страницы в PDF
+                        'image': np.array(processed)
+                    })
+
+        def ocr_worker(input_queue, output_queue):
+            while True:
+                data_ = input_queue.get()
+                if data_ is None:
+                    break
+
+                processed_image = data_['image']
+
+                results = self.reader.readtext(
+                    processed_image,
+                    batch_size=16,  # Сколько частиц изображения обрабатывать за один раз
+                    paragraph=False, # Группировать слова в абзацы автоматически
+                    detail=1, # Возвращать полную информацию (координаты + уверенность) detail=0 - только текст (быстрее)
+                    contrast_ths=0.3,  # Порог контраста для обнаружения текста
+                    adjust_contrast=0.5, # Насколько усиливать контраст изображения 0.5 - среднее усиление
+                    width_ths=0.7, # Максимальная ширина для объединения слов в строку
+                    decoder='greedy',  # Алгоритм преобразования нейросетевых данных в текст: greedy: Быстрый, но менее точный; beamsearch: Медленнее, но точнее
+                    # beamWidth=2, Сколько вариантов текста рассматривать (только для beamsearch) При greedy: Игнорируется
+                    min_size=10,  # Минимальный размер текста для распознавания (в пикселях)
+                    text_threshold=0.6,  # Минимальная уверенность что это текст
+                    link_threshold=0.5, # Уверенность для соединения символов в слова
+                    mag_ratio=1.0,  # Без увеличения
+                    slope_ths=0.1, # Допустимый наклон текста (в радианах) 0.1 - небольшой наклон разрешен
+                    ycenter_ths=0.5, # Допуск по вертикали для объединения в строки
+                    height_ths=0.5, # Допуск по высоте текста для объединения
+                    add_margin=0.02 # Добавлять поля вокруг текста (2% от размера)
+                )
+                output_queue.put({
+                    'page_num': data['page_num'],
+                    'results': results
+                })
+
+        def reconstruct_worker(input_queue, output_queue):
+            while True:
+                ocr_results = input_queue.get()
+                if ocr_results is None:
+                    break
+
+                text = self.reconstruct_text(ocr_results['results'])
+                output_queue.put({
+                    'page_num': ocr_results['page_num'],
+                    'text': text
+                })
+
+        raw_queue = Queue()
+        processed_queue = Queue()
+        ocr_queue = Queue()
+        result_queue = Queue()
+
+        # Запускаем воркеры
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Заполняем начальную очередь
+            for pdf_bytes in data:
+                raw_queue.put(pdf_bytes)
+
+            # Добавляем сигналы остановки
+            for _ in range(max_workers):
+                raw_queue.put(None)
+                processed_queue.put(None)
+                ocr_queue.put(None)
+
+            # Запускаем конвейер
+            preprocess_futures = [executor.submit(preprocess_worker, raw_queue, processed_queue)
+                                  for _ in range(max_workers)]
+            ocr_futures = [executor.submit(ocr_worker, processed_queue, ocr_queue)
+                           for _ in range(max_workers)]
+            reconstruct_futures = [executor.submit(reconstruct_worker, ocr_queue, result_queue)
+                                   for _ in range(max_workers)]
+
+            # Собираем ВСЕ результаты
+            all_pages = []
+            while True:
+                try:
+                    # Ждем все результаты с таймаутом
+                    result = result_queue.get(timeout=5.0)
+                    all_pages.append(result)
+                except Empty:
+                    break  # Больше нет результатов
+
+            # Группируем и сортируем результаты
+            return "\n\n".join(sorted(all_pages, key=lambda x: x["page_num"]))
 
     def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
         """Основной метод извлечения текста из PDF"""
@@ -195,61 +303,92 @@ class ParserPDF:
             # Оптимизированные параметры для мощной видеокарты
             results = self.reader.readtext(
                 image_np,
-                batch_size=16,  # Увеличил для заполнения GPU
-                paragraph=False,
-                detail=1,
-                contrast_ths=0.2,  # Снизил пороги для большей чувствительности
-                adjust_contrast=0.5,
-                width_ths=0.5,
-                decoder='greedy',  # Более быстрый декодер
-                beamWidth=2,  # Минимальное значение для скорости
-                min_size=2,  # Минимальный размер текста
-                text_threshold=0.5,  # Более низкий порог
-                link_threshold=0.4,
+                batch_size=16,  # Сколько частиц изображения обрабатывать за один раз
+                paragraph=False, # Группировать слова в абзацы автоматически
+                detail=1, # Возвращать полную информацию (координаты + уверенность) detail=0 - только текст (быстрее)
+                contrast_ths=0.3,  # Порог контраста для обнаружения текста
+                adjust_contrast=0.5, # Насколько усиливать контраст изображения 0.5 - среднее усиление
+                width_ths=0.7, # Максимальная ширина для объединения слов в строку
+                decoder='greedy',  # Алгоритм преобразования нейросетевых данных в текст: greedy: Быстрый, но менее точный; beamsearch: Медленнее, но точнее
+                # beamWidth=2, Сколько вариантов текста рассматривать (только для beamsearch) При greedy: Игнорируется
+                min_size=10,  # Минимальный размер текста для распознавания (в пикселях)
+                text_threshold=0.6,  # Минимальная уверенность что это текст
+                link_threshold=0.5, # Уверенность для соединения символов в слова
                 mag_ratio=1.0,  # Без увеличения
-                slope_ths=0.1,
-                ycenter_ths=0.3,
-                height_ths=0.3,
-                add_margin=0.02
+                slope_ths=0.1, # Допустимый наклон текста (в радианах) 0.1 - небольшой наклон разрешен
+                ycenter_ths=0.5, # Допуск по вертикали для объединения в строки
+                height_ths=0.5, # Допуск по высоте текста для объединения
+                add_margin=0.02 # Добавлять поля вокруг текста (2% от размера)
             )
 
-            return self._extract_text_with_correct_order(results, page_num)
+            return self.reconstruct_text(results)
 
         except Exception as e:
             config.logger.error(f"EasyOCR ошибка на странице {page_num + 1}: {e}")
             return ""
 
-    def _extract_text_with_correct_order(self, results, page_num: int) -> str:
-        """Извлечение текста с ТОЧНЫМ порядком слов"""
-        if not results:
-            return ""
+    def group_into_lines(self, results):
+        """Группирует слова в строки на основе Y-координат"""
+        word_data = []
 
-        try:
-            # Собираем все текстовые элементы
-            all_text = ''
+        for result in results:
+            if len(result) >= 2:
+                bbox, text = result[0], result[1]
+                text = self._fast_replace_symbols(str(text).strip())
 
-            for result in results:
-                if len(result) >= 2:
-                    bbox, text = result[0], result[1]
-                    text = self._fast_replace_symbols(str(text).strip())
+                # Получаем координаты bounding box
+                points = np.array(bbox)
 
-                    # Получаем координаты bounding box
-                    points = np.array(bbox)
-                    x_coords = points[:, 0]
-                    y_coords = points[:, 1]
+                left = points[0][0]
+                top = points[0][1]
+                right = points[2][0]
+                bottom = points[2][1]
 
-                    top = min(y_coords)
-                    bottom = max(y_coords)
-                    left = min(x_coords)
-                    right = max(x_coords)
+                word_data.append({
+                    "text": text,
+                    "left": left,
+                    "right": right,
+                    "top": top,
+                    "bottom": bottom,
+                    "avg_y": (top + bottom) / 2
+                })
 
-                    all_text += f"{text} ({points}) ['top': {top}, 'bottom': {bottom}, 'left': {left}, 'right': {right}]"
+        sorted_words = sorted(word_data, key=lambda w: w["avg_y"])
+        lines = []
+        current_line = [sorted_words[0]]
+        current_y = sorted_words[0]["avg_y"]
 
-            return all_text
+        for word in sorted_words[1:]:
+            # Если слово находится достаточно близко по Y, добавляем в текущую строку
+            if abs(word["avg_y"] - current_y) <= self.y_tolerance:
+                current_line.append(word)
+            else:
+                # Начинаем новую строку
+                lines.append(current_line)
+                current_line = [word]
+                current_y = word["avg-y"]
 
-        except Exception as e:
-            config.logger.error(f"Ошибка обработки результатов: {e}")
-            return ""
+        if current_line:
+            lines.append(current_line)
+
+        return lines
+
+    def reconstruct_text(self, result) -> str:
+        """
+        Основной метод для восстановления текста из координат слов
+        """
+        # Группируем слова в строки
+        lines = self.group_into_lines(result)
+
+        reconstructed_lines = []
+
+        for line in lines:
+            # Формируем текст строки
+            line_text = ' '.join(sorted(line, key=lambda w: w['left']))
+            reconstructed_lines.append(line_text)
+
+        # Объединяем все строки
+        return '\n'.join(reconstructed_lines)
 
     @staticmethod
     def _fast_replace_symbols(text: str) -> str:
