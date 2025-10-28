@@ -220,12 +220,12 @@ class ParserPDF:
             return ""
 
     def _extract_text_with_correct_order(self, results, page_num: int) -> str:
-        """Извлечение текста с правильным порядком слов"""
+        """Извлечение текста с ПРАВИЛЬНЫМ порядком слов"""
         if not results:
             return ""
 
         try:
-            # Собираем все текстовые элементы
+            # Собираем все текстовые элементы с более детальной информацией
             text_elements = []
 
             for result in results:
@@ -234,36 +234,94 @@ class ParserPDF:
                     confidence = result[2] if len(result) == 3 else 0.7
 
                     text = str(text).strip()
-                    if text and confidence >= 0.3:  # Понижаем порог для большего охвата
-                        # Вычисляем центр bounding box для точной сортировки
-                        x_center = (bbox[0][0] + bbox[1][0] + bbox[2][0] + bbox[3][0]) / 4
-                        y_center = (bbox[0][1] + bbox[1][1] + bbox[2][1] + bbox[3][1]) / 4
+                    if text and confidence >= 0.3:
+                        # Получаем координаты bounding box
+                        x1, y1 = bbox[0]  # верхний левый
+                        x2, y2 = bbox[1]  # верхний правый
+                        x3, y3 = bbox[2]  # нижний правый
+                        x4, y4 = bbox[3]  # нижний левый
+
+                        # Вычисляем ключевые точки для сортировки
+                        top_left_y = min(y1, y2, y3, y4)
+                        bottom_right_y = max(y1, y2, y3, y4)
+                        top_left_x = min(x1, x2, x3, x4)
+
+                        # Высота текстового элемента
+                        height = bottom_right_y - top_left_y
 
                         text_elements.append({
                             'text': text,
-                            'x_center': x_center,
-                            'y_center': y_center,
+                            'top_left_y': top_left_y,
+                            'top_left_x': top_left_x,
+                            'height': height,
+                            'bbox': bbox,
                             'confidence': confidence
                         })
 
             if not text_elements:
                 return ""
 
-            # Сортируем ВСЕ элементы как единый поток: сверху-вниз, слева-направо
-            text_elements.sort(key=lambda x: (x['y_center'], x['x_center']))
+            # ГРУППИРУЕМ по строкам, а потом сортируем внутри строк
+            lines = {}
 
-            # Просто объединяем все слова в одну строку с правильным порядком
-            all_text = ' '.join([self._fast_replace_symbols(elem['text']) for elem in text_elements])
+            for elem in text_elements:
+                # Находим подходящую строку для элемента
+                found_line = None
+                for line_y in lines.keys():
+                    # Если элемент находится в пределах высоты строки ± 50%
+                    if abs(line_y - elem['top_left_y']) < elem['height'] * 0.5:
+                        found_line = line_y
+                        break
+
+                if found_line is not None:
+                    lines[found_line].append(elem)
+                else:
+                    lines[elem['top_left_y']] = [elem]
+
+            # Сортируем строки по Y координате (сверху вниз)
+            sorted_lines = sorted(lines.keys())
+
+            # Сортируем элементы внутри каждой строки по X координате (слева направо)
+            all_text_parts = []
+
+            for line_y in sorted_lines:
+                line_elements = lines[line_y]
+                line_elements.sort(key=lambda x: x['top_left_x'])
+
+                # Объединяем слова в строке
+                line_text = ' '.join([self._fast_replace_symbols(elem['text']) for elem in line_elements])
+                all_text_parts.append(line_text)
+
+            # Объединяем все строки
+            all_text = ' '.join(all_text_parts)
 
             # Логируем статистику
             total_confidence = sum(elem['confidence'] for elem in text_elements)
             avg_confidence = total_confidence / len(text_elements) if text_elements else 0
-            config.logger.info(f"Страница {page_num + 1}: {len(text_elements)} слов, уверенность: {avg_confidence:.3f}")
+            config.logger.info(
+                f"Страница {page_num + 1}: {len(text_elements)} слов, {len(sorted_lines)} строк, уверенность: {avg_confidence:.3f}")
 
             return all_text
 
         except Exception as e:
             config.logger.error(f"Ошибка обработки результатов: {e}")
+            # Фолбэк: простая сортировка по Y затем по X
+            try:
+                text_elements = []
+                for result in results:
+                    if len(result) >= 2:
+                        bbox, text = result[0], result[1]
+                        text = str(text).strip()
+                        if text:
+                            x_center = (bbox[0][0] + bbox[1][0] + bbox[2][0] + bbox[3][0]) / 4
+                            y_center = (bbox[0][1] + bbox[1][1] + bbox[2][1] + bbox[3][1]) / 4
+                            text_elements.append({'text': text, 'x_center': x_center, 'y_center': y_center})
+
+                if text_elements:
+                    text_elements.sort(key=lambda x: (x['y_center'], x['x_center']))
+                    return ' '.join([self._fast_replace_symbols(elem['text']) for elem in text_elements])
+            except:
+                pass
             return ""
 
     @staticmethod
@@ -272,7 +330,7 @@ class ParserPDF:
         if not text:
             return text
 
-        text = re.sub(r'[NJ№]\w?\s+', r'№ ', text)
+        text = re.sub(r'[NJ№].?\s+', r'№ ', text)
 
         return text
 
