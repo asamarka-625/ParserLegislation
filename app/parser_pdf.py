@@ -118,6 +118,7 @@ class ParserPDF:
                 while True:
                     pdf_bytes = input_queue.get()
                     if pdf_bytes is None:  # Сигнал остановки
+                        output_queue.put(None)
                         break
 
                     images = convert_from_bytes(
@@ -136,12 +137,14 @@ class ParserPDF:
                         })
             except Exception as e:
                 config.logger.error(f"Ошибка в preprocess_worker: {e}")
+                output_queue.put(None)
 
         def ocr_worker(input_queue, output_queue):
             try:
                 while True:
                     data_ = input_queue.get()
                     if data_ is None:
+                        output_queue.put(None)
                         break
 
                     processed_image = data_['image']
@@ -172,12 +175,14 @@ class ParserPDF:
 
             except Exception as e:
                 config.logger.error(f"Ошибка в ocr_worker: {e}")
+                output_queue.put(None)
 
         def reconstruct_worker(input_queue, output_queue):
             try:
                 while True:
                     ocr_results = input_queue.get()
                     if ocr_results is None:
+                        output_queue.put(None)
                         break
 
                     text = self.reconstruct_text(ocr_results['results'])
@@ -188,6 +193,7 @@ class ParserPDF:
 
             except Exception as e:
                 config.logger.error(f"Ошибка в reconstruct_worker: {e}")
+                output_queue.put(None)
 
         raw_queue = Queue()
         processed_queue = Queue()
@@ -203,8 +209,6 @@ class ParserPDF:
             # Добавляем сигналы остановки
             for _ in range(max_workers):
                 raw_queue.put(None)
-                processed_queue.put(None)
-                ocr_queue.put(None)
 
             # Запускаем конвейер
             preprocess_futures = [executor.submit(preprocess_worker, raw_queue, processed_queue)
