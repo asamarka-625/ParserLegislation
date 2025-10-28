@@ -220,20 +220,32 @@ class ParserPDF:
             return ""
 
     def _extract_text_with_correct_order(self, results, page_num: int) -> str:
-        """Извлечение текста с ПРАВИЛЬНЫМ порядком слов"""
+        """Извлечение текста с ТОЧНЫМ порядком слов"""
         if not results:
             return ""
 
         try:
-            # Собираем все текстовые элементы с более детальной информацией
-            text_lines = []
-            for bbox, text in results:
-                text = f"{str(text).strip()}[{bbox}]"
-                if text:
-                    text = self._fast_replace_symbols(text)
-                    text_lines.append(text)
+            # Собираем все текстовые элементы
+            all_text = ''
 
-            return '\n'.join(text_lines)
+            for result in results:
+                if len(result) >= 2:
+                    bbox, text = result[0], result[1]
+                    text = self._fast_replace_symbols(str(text).strip())
+
+                    # Получаем координаты bounding box
+                    points = np.array(bbox)
+                    x_coords = points[:, 0]
+                    y_coords = points[:, 1]
+
+                    top = min(y_coords)
+                    bottom = max(y_coords)
+                    left = min(x_coords)
+                    right = max(x_coords)
+
+                    all_text += f"{text} ({points}) ['top': {top}, 'bottom': {bottom}, 'left': {left}, 'right': {right}]"
+
+            return all_text
 
         except Exception as e:
             config.logger.error(f"Ошибка обработки результатов: {e}")
