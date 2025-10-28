@@ -267,42 +267,6 @@ class ParserPDF:
             return ""
 
     @staticmethod
-    def _group_into_lines(text_elements, line_threshold=0.5):
-        """Группирует текстовые элементы в строки"""
-        if not text_elements:
-            return []
-
-        # Сортируем по Y координате
-        text_elements.sort(key=lambda x: x['y_center'])
-
-        lines = []
-        current_line = [text_elements[0]]
-        current_y = text_elements[0]['y_center']
-
-        for elem in text_elements[1:]:
-            # Вычисляем высоту текущей строки
-            line_height = max(elem['bbox'][2][1] - elem['bbox'][0][1] for elem in current_line)
-
-            # Если элемент находится достаточно близко к текущей строке
-            if abs(elem['y_center'] - current_y) <= line_height * line_threshold:
-                current_line.append(elem)
-                # Обновляем среднюю Y координату строки
-                current_y = sum(e['y_center'] for e in current_line) / len(current_line)
-            else:
-                # Сортируем элементы в строке по X координате
-                current_line.sort(key=lambda x: x['x_center'])
-                lines.append(current_line)
-                current_line = [elem]
-                current_y = elem['y_center']
-
-        # Добавляем последнюю строку
-        if current_line:
-            current_line.sort(key=lambda x: x['x_center'])
-            lines.append(current_line)
-
-        return lines
-
-    @staticmethod
     def _fast_replace_symbols(text: str) -> str:
         """Быстрая замена символов Ng и N на №"""
         if not text:
