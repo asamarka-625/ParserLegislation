@@ -1,4 +1,5 @@
 # Внешние зависимости
+import re
 import psutil
 import os
 import resource
@@ -8,10 +9,10 @@ from PIL import Image
 from pdf2image import convert_from_bytes
 from fake_useragent import UserAgent
 import httpx
-# import easyocr
-# import torch
-# import numpy as np
-# import cv2
+import easyocr
+import torch
+import numpy as np
+import cv2
 # Внутренние модули
 from app.config import get_config
 from app.models import DataLegislation
@@ -195,7 +196,7 @@ class ParserPDF:
             results = self.reader.readtext(
                 image_np,
                 batch_size=16,  # Увеличил для заполнения GPU
-                paragraph=True,
+                paragraph=False,
                 detail=1,
                 contrast_ths=0.2,  # Снизил пороги для большей чувствительности
                 adjust_contrast=0.5,
@@ -205,48 +206,115 @@ class ParserPDF:
                 min_size=2,  # Минимальный размер текста
                 text_threshold=0.5,  # Более низкий порог
                 link_threshold=0.4,
-                mag_ratio=1.0  # Без увеличения
+                mag_ratio=1.0,  # Без увеличения
+                slope_ths=0.3,
+                ycenter_ths=0.5,
+                height_ths=0.5,
+                add_margin=0.05
             )
 
-            return self._parse_easyocr_results_fast(results, page_num)
+            return self._parse_and_reconstruct_results(results, page_num)
 
         except Exception as e:
             config.logger.error(f"EasyOCR ошибка на странице {page_num + 1}: {e}")
             return ""
 
-    def _parse_easyocr_results_fast(self, results, page_num: int) -> str:
-        """Быстрая обработка результатов EasyOCR"""
+    def _parse_and_reconstruct_results(self, results, page_num: int) -> str:
+        """Правильная обработка и восстановление порядка текста"""
         if not results:
             config.logger.info(f"Текст не найден на странице {page_num + 1}")
             return ""
 
         try:
+            # Собираем данные о всех найденных текстовых элементах
+            text_elements = []
+
+            for result in results:
+                if len(result) >= 2:
+                    bbox, text = result[0], result[1]
+                    confidence = result[2] if len(result) == 3 else 0.7
+
+                    text = str(text).strip()
+                    if text and confidence >= 0.4:
+                        # Вычисляем центр bounding box
+                        x_center = (bbox[0][0] + bbox[1][0] + bbox[2][0] + bbox[3][0]) / 4
+                        y_center = (bbox[0][1] + bbox[1][1] + bbox[2][1] + bbox[3][1]) / 4
+
+                        text_elements.append({
+                            'text': self._fast_replace_symbols(text),
+                            'bbox': bbox,
+                            'x_center': x_center,
+                            'y_center': y_center,
+                            'confidence': confidence
+                        })
+
+            if not text_elements:
+                return ""
+
+            # Сортируем элементы: сначала по строкам (Y), потом по положению в строке (X)
+            text_elements.sort(key=lambda x: (x['y_center'], x['x_center']))
+
+            # Группируем по строкам
+            lines = self._group_into_lines(text_elements)
+
+            # Формируем текст
             text_lines = []
             total_confidence = 0
             count = 0
 
-            for result in results:
-                if len(result) >= 2:
-                    text = str(result[1]).strip()
-                    if text:
-                        text = self._fast_replace_symbols(text)
-                        text_lines.append(text)
-
-                        # Считаем confidence если есть
-                        if len(result) == 3:
-                            total_confidence += result[2]
-                            count += 1
+            for line in lines:
+                line_text = ' '.join([elem['text'] for elem in line])
+                text_lines.append(line_text)
+                total_confidence += sum(elem['confidence'] for elem in line)
+                count += len(line)
 
             if text_lines:
                 avg_confidence = total_confidence / count if count > 0 else 0
                 config.logger.info(
                     f"Страница {page_num + 1}: {len(text_lines)} строк, уверенность: {avg_confidence:.3f}")
                 return '\n'.join(text_lines)
+
             return ""
 
         except Exception as e:
-            config.logger.error(f"Ошибка парсинга результатов EasyOCR: {e}")
+            config.logger.error(f"Ошибка обработки результатов: {e}")
             return ""
+
+    @staticmethod
+    def _group_into_lines(text_elements, line_threshold=0.5):
+        """Группирует текстовые элементы в строки"""
+        if not text_elements:
+            return []
+
+        # Сортируем по Y координате
+        text_elements.sort(key=lambda x: x['y_center'])
+
+        lines = []
+        current_line = [text_elements[0]]
+        current_y = text_elements[0]['y_center']
+
+        for elem in text_elements[1:]:
+            # Вычисляем высоту текущей строки
+            line_height = max(elem['bbox'][2][1] - elem['bbox'][0][1] for elem in current_line)
+
+            # Если элемент находится достаточно близко к текущей строке
+            if abs(elem['y_center'] - current_y) <= line_height * line_threshold:
+                current_line.append(elem)
+                # Обновляем среднюю Y координату строки
+                current_y = sum(e['y_center'] for e in current_line) / len(current_line)
+            else:
+                # Сортируем элементы в строке по X координате
+                current_line.sort(key=lambda x: x['x_center'])
+                lines.append(current_line)
+                current_line = [elem]
+                current_y = elem['y_center']
+
+        # Добавляем последнюю строку
+        if current_line:
+            current_line.sort(key=lambda x: x['x_center'])
+            lines.append(current_line)
+
+        return lines
 
     @staticmethod
     def _fast_replace_symbols(text: str) -> str:
@@ -254,13 +322,7 @@ class ParserPDF:
         if not text:
             return text
 
-        # Быстрые строковые замены вместо regex
-        text = text.replace('Ng', '№')
-        text = text.replace('Jg', '№')
-        text = text.replace('N', '№')
-        text = text.replace('J', '№')
-        text = text.replace('N°', '№')
-        text = text.replace('Nº', '№')
+        text = re.sub(r'[NJ№]\w?\s+', r'№ ', text)
 
         return text
 

@@ -148,7 +148,7 @@ async def worker_convert_binary_to_text_batch():
         config.logger.info("Нет документов для обработки")
         return
 
-    print(f"Найдено {len(all_documents)} документов для обработки")
+    config.logger.info(f"Найдено {len(all_documents)} документов для обработки")
 
     worker_tasks = {i: [] for i in range(1, config.TOTAL_WORKERS + 1)}
 
