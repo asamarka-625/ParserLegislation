@@ -227,9 +227,9 @@ class ParserPDF:
         try:
             # Собираем все текстовые элементы с более детальной информацией
             text_lines = []
-            for bbox, text, confidence in results:
+            for bbox, text in results:
                 text = str(text).strip()
-                if text and confidence >= 0.4:
+                if text:
                     text = self._fast_replace_symbols(text)
                     text_lines.append(text)
 
