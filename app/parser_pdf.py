@@ -327,6 +327,20 @@ class ParserPDF:
             config.logger.error(f"EasyOCR ошибка на странице {page_num + 1}: {e}")
             return ""
 
+    def reconstruct_text(self, result) -> str:
+        """
+        Основной метод для восстановления текста из координат слов
+        """
+        # Группируем слова в строки
+        lines = self.group_into_lines(result)
+
+        reconstructed_lines = (
+            ' '.join(word['text'] for word in sorted(line, key=lambda w: w['left']))
+            for line in lines
+        )
+
+        return '\n'.join(reconstructed_lines)
+
     def group_into_lines(self, results):
         """Группирует слова в строки на основе Y-координат"""
         word_data = []
@@ -366,29 +380,12 @@ class ParserPDF:
                 # Начинаем новую строку
                 lines.append(current_line)
                 current_line = [word]
-                current_y = word["avg-y"]
+                current_y = word["avg_y"]
 
         if current_line:
             lines.append(current_line)
 
         return lines
-
-    def reconstruct_text(self, result) -> str:
-        """
-        Основной метод для восстановления текста из координат слов
-        """
-        # Группируем слова в строки
-        lines = self.group_into_lines(result)
-
-        reconstructed_lines = []
-
-        for line in lines:
-            # Формируем текст строки
-            line_text = ' '.join(sorted(line, key=lambda w: w['left']))
-            reconstructed_lines.append(line_text)
-
-        # Объединяем все строки
-        return '\n'.join(reconstructed_lines)
 
     @staticmethod
     def _fast_replace_symbols(text: str) -> str:
