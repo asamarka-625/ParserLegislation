@@ -196,7 +196,7 @@ class ParserPDF:
             results = self.reader.readtext(
                 image_np,
                 batch_size=16,  # Увеличил для заполнения GPU
-                paragraph=True,
+                paragraph=False,
                 detail=1,
                 contrast_ths=0.2,  # Снизил пороги для большей чувствительности
                 adjust_contrast=0.5,
@@ -228,7 +228,7 @@ class ParserPDF:
             # Собираем все текстовые элементы с более детальной информацией
             text_lines = []
             for bbox, text in results:
-                text = str(text).strip()
+                text = f"{str(text).strip()}[{bbox}]"
                 if text:
                     text = self._fast_replace_symbols(text)
                     text_lines.append(text)
