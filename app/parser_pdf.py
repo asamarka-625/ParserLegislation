@@ -8,10 +8,10 @@ from PIL import Image
 from pdf2image import convert_from_bytes
 from fake_useragent import UserAgent
 import httpx
-import easyocr
-import torch
-import numpy as np
-import cv2
+# import easyocr
+# import torch
+# import numpy as np
+# import cv2
 # Внутренние модули
 from app.config import get_config
 from app.models import DataLegislation
@@ -147,7 +147,7 @@ class ParserPDF:
                 # Распознавание текста с увеличенным batch_size
                 page_text = self._perform_ocr_easy_fast(processed_image, i)
                 if page_text.strip():
-                    all_text.append(f"--- Страница {i + 1} ---\n{page_text}")
+                    all_text.append(page_text)
 
             return "\n\n".join(all_text)
 
