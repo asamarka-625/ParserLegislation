@@ -169,7 +169,7 @@ class ParserPDF:
                         add_margin=0.02 # Добавлять поля вокруг текста (2% от размера)
                     )
                     output_queue.put({
-                        'page_num': data['page_num'],
+                        'page_num': data_['page_num'],
                         'results': results
                     })
 
@@ -218,18 +218,24 @@ class ParserPDF:
             reconstruct_futures = [executor.submit(reconstruct_worker, ocr_queue, result_queue)
                                    for _ in range(max_workers)]
 
+            for future in reconstruct_futures:
+                future.result()
+
             # Собираем ВСЕ результаты
             all_pages = []
             while True:
                 try:
                     # Ждем все результаты с таймаутом
-                    result = result_queue.get(timeout=5.0)
-                    all_pages.append(result)
+                    result = result_queue.get_nowait()
+                    if result:
+                        all_pages.append(result)
                 except Empty:
                     break  # Больше нет результатов
 
             # Группируем и сортируем результаты
-            return "\n\n".join(sorted(all_pages, key=lambda x: x["page_num"]))
+            return "\n".join(
+                r["text"] for r in sorted(all_pages, key=lambda x: x["page_num"])
+            )
 
     def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
         """Основной метод извлечения текста из PDF"""
