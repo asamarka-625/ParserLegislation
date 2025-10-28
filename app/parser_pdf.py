@@ -114,69 +114,80 @@ class ParserPDF:
 
     def conveyor_extract_text_from_pdf_bytes(self, data, max_workers: int = 4):
         def preprocess_worker(input_queue, output_queue):
-            while True:
-                pdf_bytes = input_queue.get()
-                if pdf_bytes is None:  # Сигнал остановки
-                    break
+            try:
+                while True:
+                    pdf_bytes = input_queue.get()
+                    if pdf_bytes is None:  # Сигнал остановки
+                        break
 
-                images = convert_from_bytes(
-                    pdf_bytes,
-                    dpi=250,  # Снизил DPI для скорости, качество остается хорошим
-                    fmt='JPEG',
-                    thread_count=4,  # Увеличил количество потоков
-                    use_pdftocairo=True,  # Более быстрый рендерер
-                    strict=False
-                )
-                for page_num, image in enumerate(images):
-                    processed = self._fast_optimize_image(image)
-                    output_queue.put({
-                        'page_num': page_num,  # Номер страницы в PDF
-                        'image': np.array(processed)
-                    })
+                    images = convert_from_bytes(
+                        pdf_bytes,
+                        dpi=250,  # Снизил DPI для скорости, качество остается хорошим
+                        fmt='JPEG',
+                        thread_count=4,  # Увеличил количество потоков
+                        use_pdftocairo=True,  # Более быстрый рендерер
+                        strict=False
+                    )
+                    for page_num, image in enumerate(images):
+                        processed = self._fast_optimize_image(image)
+                        output_queue.put({
+                            'page_num': page_num,  # Номер страницы в PDF
+                            'image': np.array(processed)
+                        })
+            except Exception as e:
+                config.logger.error(f"Ошибка в preprocess_worker: {e}")
 
         def ocr_worker(input_queue, output_queue):
-            while True:
-                data_ = input_queue.get()
-                if data_ is None:
-                    break
+            try:
+                while True:
+                    data_ = input_queue.get()
+                    if data_ is None:
+                        break
 
-                processed_image = data_['image']
+                    processed_image = data_['image']
 
-                results = self.reader.readtext(
-                    processed_image,
-                    batch_size=16,  # Сколько частиц изображения обрабатывать за один раз
-                    paragraph=False, # Группировать слова в абзацы автоматически
-                    detail=1, # Возвращать полную информацию (координаты + уверенность) detail=0 - только текст (быстрее)
-                    contrast_ths=0.3,  # Порог контраста для обнаружения текста
-                    adjust_contrast=0.5, # Насколько усиливать контраст изображения 0.5 - среднее усиление
-                    width_ths=0.7, # Максимальная ширина для объединения слов в строку
-                    decoder='greedy',  # Алгоритм преобразования нейросетевых данных в текст: greedy: Быстрый, но менее точный; beamsearch: Медленнее, но точнее
-                    # beamWidth=2, Сколько вариантов текста рассматривать (только для beamsearch) При greedy: Игнорируется
-                    min_size=10,  # Минимальный размер текста для распознавания (в пикселях)
-                    text_threshold=0.6,  # Минимальная уверенность что это текст
-                    link_threshold=0.5, # Уверенность для соединения символов в слова
-                    mag_ratio=1.0,  # Без увеличения
-                    slope_ths=0.1, # Допустимый наклон текста (в радианах) 0.1 - небольшой наклон разрешен
-                    ycenter_ths=0.5, # Допуск по вертикали для объединения в строки
-                    height_ths=0.5, # Допуск по высоте текста для объединения
-                    add_margin=0.02 # Добавлять поля вокруг текста (2% от размера)
-                )
-                output_queue.put({
-                    'page_num': data['page_num'],
-                    'results': results
-                })
+                    results = self.reader.readtext(
+                        processed_image,
+                        batch_size=16,  # Сколько частиц изображения обрабатывать за один раз
+                        paragraph=False, # Группировать слова в абзацы автоматически
+                        detail=1, # Возвращать полную информацию (координаты + уверенность) detail=0 - только текст (быстрее)
+                        contrast_ths=0.3,  # Порог контраста для обнаружения текста
+                        adjust_contrast=0.5, # Насколько усиливать контраст изображения 0.5 - среднее усиление
+                        width_ths=0.7, # Максимальная ширина для объединения слов в строку
+                        decoder='greedy',  # Алгоритм преобразования нейросетевых данных в текст: greedy: Быстрый, но менее точный; beamsearch: Медленнее, но точнее
+                        # beamWidth=2, Сколько вариантов текста рассматривать (только для beamsearch) При greedy: Игнорируется
+                        min_size=10,  # Минимальный размер текста для распознавания (в пикселях)
+                        text_threshold=0.6,  # Минимальная уверенность что это текст
+                        link_threshold=0.5, # Уверенность для соединения символов в слова
+                        mag_ratio=1.0,  # Без увеличения
+                        slope_ths=0.1, # Допустимый наклон текста (в радианах) 0.1 - небольшой наклон разрешен
+                        ycenter_ths=0.5, # Допуск по вертикали для объединения в строки
+                        height_ths=0.5, # Допуск по высоте текста для объединения
+                        add_margin=0.02 # Добавлять поля вокруг текста (2% от размера)
+                    )
+                    output_queue.put({
+                        'page_num': data['page_num'],
+                        'results': results
+                    })
+
+            except Exception as e:
+                config.logger.error(f"Ошибка в ocr_worker: {e}")
 
         def reconstruct_worker(input_queue, output_queue):
-            while True:
-                ocr_results = input_queue.get()
-                if ocr_results is None:
-                    break
+            try:
+                while True:
+                    ocr_results = input_queue.get()
+                    if ocr_results is None:
+                        break
 
-                text = self.reconstruct_text(ocr_results['results'])
-                output_queue.put({
-                    'page_num': ocr_results['page_num'],
-                    'text': text
-                })
+                    text = self.reconstruct_text(ocr_results['results'])
+                    output_queue.put({
+                        'page_num': ocr_results['page_num'],
+                        'text': text
+                    })
+
+            except Exception as e:
+                config.logger.error(f"Ошибка в reconstruct_worker: {e}")
 
         raw_queue = Queue()
         processed_queue = Queue()
@@ -258,7 +269,7 @@ class ParserPDF:
                 if page_text.strip():
                     all_text.append(page_text)
 
-            return "\n\n".join(all_text)
+            return "\n".join(all_text)
 
         except Exception as e:
             config.logger.error(f"Ошибка OCR: {e}")
