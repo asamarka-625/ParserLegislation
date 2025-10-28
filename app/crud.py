@@ -138,7 +138,8 @@ async def sql_get_legislation_by_have_binary_and_not_text(
             sa.select(DataLegislation)
             .where(
                 DataLegislation.binary_pdf != None,
-                DataLegislation.text == None
+                DataLegislation.text == None,
+                DataLegislation.law_number == None
             )
             .order_by(DataLegislation.id)
         )
