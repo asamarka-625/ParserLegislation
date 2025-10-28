@@ -14,6 +14,7 @@ load_dotenv()
 class Config:
     _database_url: str = field(default_factory=lambda: os.getenv("DATABASE_URL"))
     logger: logging.Logger = field(init=False)
+    TOTAL_WORKERS: int = field(default_factory=lambda: int(os.getenv("TOTAL_WORKERS")))
 
     def __post_init__(self):
         self.logger = setup_logger(

@@ -158,9 +158,9 @@ class ParserPDF:
     def _fast_optimize_image(self, image: Image.Image) -> Image.Image:
         """Быстрая оптимизация изображения для GPU"""
         try:
-            # Быстрая конвертация в grayscale
-            if image.mode != 'L':
-                image = image.convert('L')
+            # Быстрая конвертация в RGB
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
 
             original_width, original_height = image.size
 
@@ -189,25 +189,21 @@ class ParserPDF:
     def _perform_ocr_easy_fast(self, image: Image.Image, page_num: int) -> str:
         """Быстрое распознавание текста с оптимизацией для GPU"""
         try:
-            # Быстрая конвертация в RGB
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-
             image_np = np.array(image)
 
             # Оптимизированные параметры для мощной видеокарты
             results = self.reader.readtext(
                 image_np,
                 batch_size=16,  # Увеличил для заполнения GPU
-                paragraph=False,  # Отключил для скорости, обработаем сами
+                paragraph=True,
                 detail=1,
-                contrast_ths=0.1,  # Снизил пороги для большей чувствительности
+                contrast_ths=0.2,  # Снизил пороги для большей чувствительности
                 adjust_contrast=0.5,
-                width_ths=0.7,
+                width_ths=0.8,
                 decoder='greedy',  # Более быстрый декодер
-                beamWidth=1,  # Минимальное значение для скорости
+                beamWidth=2,  # Минимальное значение для скорости
                 min_size=2,  # Минимальный размер текста
-                text_threshold=0.4,  # Более низкий порог
+                text_threshold=0.5,  # Более низкий порог
                 link_threshold=0.4,
                 mag_ratio=1.0  # Без увеличения
             )
@@ -225,47 +221,28 @@ class ParserPDF:
             return ""
 
         try:
-            valid_lines = []
+            text_lines = []
             total_confidence = 0
+            count = 0
 
             for result in results:
-                try:
-                    if len(result) == 3:
-                        bbox, text, confidence = result
-                    elif len(result) == 2:
-                        bbox, text = result
-                        confidence = 0.7  # Понизил значение по умолчанию
-                    else:
-                        continue
+                if len(result) >= 2:
+                    text = str(result[1]).strip()
+                    if text:
+                        text = self._fast_replace_symbols(text)
+                        text_lines.append(text)
 
-                    text = str(text).strip() if text else ""
+                        # Считаем confidence если есть
+                        if len(result) == 3:
+                            total_confidence += result[2]
+                            count += 1
 
-                    # Быстрая замена символов
-                    text = self._fast_replace_symbols(text)
-
-                    # Более низкий порог уверенности для скорости
-                    if confidence >= 0.5 and len(text) >= 1:  # Снизил требования
-                        valid_lines.append({
-                            'text': text,
-                            'confidence': confidence,
-                            'bbox': bbox
-                        })
-                        total_confidence += confidence
-
-                except Exception as e:
-                    continue  # Пропускаем ошибки для скорости
-
-            if valid_lines:
-                # Быстрое восстановление структуры
-                final_text = self._fast_reconstruct_structure(valid_lines)
-
-                avg_confidence = total_confidence / len(valid_lines)
+            if text_lines:
+                avg_confidence = total_confidence / count if count > 0 else 0
                 config.logger.info(
-                    f"Страница {page_num + 1}: {len(valid_lines)} строк, уверенность: {avg_confidence:.3f}")
-
-                return final_text
-            else:
-                return ""
+                    f"Страница {page_num + 1}: {len(text_lines)} строк, уверенность: {avg_confidence:.3f}")
+                return '\n'.join(text_lines)
+            return ""
 
         except Exception as e:
             config.logger.error(f"Ошибка парсинга результатов EasyOCR: {e}")
@@ -282,45 +259,10 @@ class ParserPDF:
         text = text.replace('Jg', '№')
         text = text.replace('N', '№')
         text = text.replace('J', '№')
+        text = text.replace('N°', '№')
+        text = text.replace('Nº', '№')
 
         return text
-
-    @staticmethod
-    def _fast_reconstruct_structure(lines_data: List[dict]) -> str:
-        """Быстрое восстановление структуры документа"""
-        if not lines_data:
-            return ""
-
-        try:
-            # Быстрая сортировка
-            lines_data.sort(key=lambda x: x['bbox'][0][1])
-
-            paragraphs = []
-            current_block = []
-            previous_bottom = None
-
-            for line in lines_data:
-                bbox = line['bbox']
-                current_top = bbox[0][1]
-
-                if previous_bottom is not None and current_top - previous_bottom > 20:  # Уменьшил отступ
-                    if current_block:
-                        paragraph_text = ' '.join(current_block)
-                        paragraphs.append(paragraph_text)
-                        current_block = []
-
-                current_block.append(line['text'])
-                previous_bottom = bbox[2][1]
-
-            if current_block:
-                paragraph_text = ' '.join(current_block)
-                paragraphs.append(paragraph_text)
-
-            return '\n\n'.join(paragraphs)
-
-        except Exception as e:
-            # Возвращаем простой текст в случае ошибки
-            return ' '.join(item['text'] for item in lines_data)
 
     async def async_run(
             self,
