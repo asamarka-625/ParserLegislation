@@ -200,33 +200,32 @@ class ParserPDF:
                 detail=1,
                 contrast_ths=0.2,  # Снизил пороги для большей чувствительности
                 adjust_contrast=0.5,
-                width_ths=0.8,
+                width_ths=0.5,
                 decoder='greedy',  # Более быстрый декодер
                 beamWidth=2,  # Минимальное значение для скорости
                 min_size=2,  # Минимальный размер текста
                 text_threshold=0.5,  # Более низкий порог
                 link_threshold=0.4,
                 mag_ratio=1.0,  # Без увеличения
-                slope_ths=0.3,
-                ycenter_ths=0.5,
-                height_ths=0.5,
-                add_margin=0.05
+                slope_ths=0.1,
+                ycenter_ths=0.3,
+                height_ths=0.3,
+                add_margin=0.02
             )
 
-            return self._parse_and_reconstruct_results(results, page_num)
+            return self._extract_text_with_correct_order(results, page_num)
 
         except Exception as e:
             config.logger.error(f"EasyOCR ошибка на странице {page_num + 1}: {e}")
             return ""
 
-    def _parse_and_reconstruct_results(self, results, page_num: int) -> str:
-        """Правильная обработка и восстановление порядка текста"""
+    def _extract_text_with_correct_order(self, results, page_num: int) -> str:
+        """Извлечение текста с правильным порядком слов"""
         if not results:
-            config.logger.info(f"Текст не найден на странице {page_num + 1}")
             return ""
 
         try:
-            # Собираем данные о всех найденных текстовых элементах
+            # Собираем все текстовые элементы
             text_elements = []
 
             for result in results:
@@ -235,14 +234,13 @@ class ParserPDF:
                     confidence = result[2] if len(result) == 3 else 0.7
 
                     text = str(text).strip()
-                    if text and confidence >= 0.4:
-                        # Вычисляем центр bounding box
+                    if text and confidence >= 0.3:  # Понижаем порог для большего охвата
+                        # Вычисляем центр bounding box для точной сортировки
                         x_center = (bbox[0][0] + bbox[1][0] + bbox[2][0] + bbox[3][0]) / 4
                         y_center = (bbox[0][1] + bbox[1][1] + bbox[2][1] + bbox[3][1]) / 4
 
                         text_elements.append({
-                            'text': self._fast_replace_symbols(text),
-                            'bbox': bbox,
+                            'text': text,
                             'x_center': x_center,
                             'y_center': y_center,
                             'confidence': confidence
@@ -251,30 +249,18 @@ class ParserPDF:
             if not text_elements:
                 return ""
 
-            # Сортируем элементы: сначала по строкам (Y), потом по положению в строке (X)
+            # Сортируем ВСЕ элементы как единый поток: сверху-вниз, слева-направо
             text_elements.sort(key=lambda x: (x['y_center'], x['x_center']))
 
-            # Группируем по строкам
-            lines = self._group_into_lines(text_elements)
+            # Просто объединяем все слова в одну строку с правильным порядком
+            all_text = ' '.join([self._fast_replace_symbols(elem['text']) for elem in text_elements])
 
-            # Формируем текст
-            text_lines = []
-            total_confidence = 0
-            count = 0
+            # Логируем статистику
+            total_confidence = sum(elem['confidence'] for elem in text_elements)
+            avg_confidence = total_confidence / len(text_elements) if text_elements else 0
+            config.logger.info(f"Страница {page_num + 1}: {len(text_elements)} слов, уверенность: {avg_confidence:.3f}")
 
-            for line in lines:
-                line_text = ' '.join([elem['text'] for elem in line])
-                text_lines.append(line_text)
-                total_confidence += sum(elem['confidence'] for elem in line)
-                count += len(line)
-
-            if text_lines:
-                avg_confidence = total_confidence / count if count > 0 else 0
-                config.logger.info(
-                    f"Страница {page_num + 1}: {len(text_lines)} строк, уверенность: {avg_confidence:.3f}")
-                return '\n'.join(text_lines)
-
-            return ""
+            return all_text
 
         except Exception as e:
             config.logger.error(f"Ошибка обработки результатов: {e}")
