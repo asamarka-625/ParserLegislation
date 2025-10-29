@@ -5,8 +5,9 @@ import os
 import resource
 from typing import Optional, List, Tuple
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from queue import Queue, Empty
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
+from queue import Empty
+from multiprocessing import Queue
 from PIL import Image
 from pdf2image import convert_from_bytes
 from fake_useragent import UserAgent
@@ -125,7 +126,7 @@ class ParserPDF:
                         pdf_bytes,
                         dpi=250,  # Снизил DPI для скорости, качество остается хорошим
                         fmt='JPEG',
-                        thread_count=4,  # Увеличил количество потоков
+                        thread_count=1,  # количество потоков
                         use_pdftocairo=True,  # Более быстрый рендерер
                         strict=False
                     )
@@ -182,7 +183,6 @@ class ParserPDF:
                 while True:
                     ocr_results = input_queue.get()
                     if ocr_results is None:
-                        output_queue.put(None)
                         break
 
                     text = self.reconstruct_text(ocr_results['results'])
@@ -193,7 +193,6 @@ class ParserPDF:
 
             except Exception as e:
                 config.logger.error(f"Ошибка в reconstruct_worker: {e}")
-                output_queue.put(None)
 
         raw_queue = Queue()
         processed_queue = Queue()
@@ -201,41 +200,42 @@ class ParserPDF:
         result_queue = Queue()
 
         # Запускаем воркеры
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Заполняем начальную очередь
-            for pdf_bytes in data:
-                raw_queue.put(pdf_bytes)
+        with ThreadPoolExecutor(max_workers=max_workers) as thread_executor:
+            with ProcessPoolExecutor(max_workers=max_workers) as process_executor:
+                # Заполняем начальную очередь
+                for pdf_bytes in data:
+                    raw_queue.put(pdf_bytes)
 
-            # Добавляем сигналы остановки
-            for _ in range(max_workers):
-                raw_queue.put(None)
+                # Добавляем сигналы остановки
+                for _ in range(max_workers):
+                    raw_queue.put(None)
 
-            # Запускаем конвейер
-            preprocess_futures = [executor.submit(preprocess_worker, raw_queue, processed_queue)
-                                  for _ in range(max_workers)]
-            ocr_futures = [executor.submit(ocr_worker, processed_queue, ocr_queue)
-                           for _ in range(max_workers)]
-            reconstruct_futures = [executor.submit(reconstruct_worker, ocr_queue, result_queue)
-                                   for _ in range(max_workers)]
+                # Запускаем конвейер
+                preprocess_futures = [process_executor.submit(preprocess_worker, raw_queue, processed_queue)
+                                      for _ in range(max_workers)]
+                ocr_futures = [thread_executor.submit(ocr_worker, processed_queue, ocr_queue)
+                               for _ in range(max_workers)]
+                reconstruct_futures = [process_executor.submit(reconstruct_worker, ocr_queue, result_queue)
+                                       for _ in range(max_workers)]
 
-            for future in reconstruct_futures:
-                future.result()
+                for future in reconstruct_futures:
+                    future.result()
 
-            # Собираем ВСЕ результаты
-            all_pages = []
-            while True:
-                try:
-                    # Ждем все результаты с таймаутом
-                    result = result_queue.get_nowait()
-                    if result:
-                        all_pages.append(result)
-                except Empty:
-                    break  # Больше нет результатов
+        # Собираем ВСЕ результаты
+        all_pages = []
+        while True:
+            try:
+                # Ждем все результаты с таймаутом
+                result = result_queue.get_nowait()
+                if result:
+                    all_pages.append(result)
+            except Empty:
+                break  # Больше нет результатов
 
-            # Группируем и сортируем результаты
-            return "\n".join(
-                r["text"] for r in sorted(all_pages, key=lambda x: x["page_num"])
-            )
+        # Группируем и сортируем результаты
+        return "\n".join(
+            r["text"] for r in sorted(all_pages, key=lambda x: x["page_num"])
+        )
 
     def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> Optional[str]:
         """Основной метод извлечения текста из PDF"""
@@ -415,7 +415,7 @@ class ParserPDF:
             return text
 
         text = re.sub(r'[NJ№].?\s+', r'№ ', text)
-
+        text = text.replace(' 0 ', 'о')
         return text
 
     async def async_run(
