@@ -116,6 +116,7 @@ class ParserPDF:
     def conveyor_extract_text_from_pdf_bytes(self, data, max_workers: int = 4):
         def preprocess_worker(input_queue, output_queue):
             try:
+                parser = ParserPDF()
                 while True:
                     pdf_bytes = input_queue.get()
                     if pdf_bytes is None:  # Сигнал остановки
@@ -131,7 +132,7 @@ class ParserPDF:
                         strict=False
                     )
                     for page_num, image in enumerate(images):
-                        processed = self._fast_optimize_image(image)
+                        processed = parser._fast_optimize_image(image)
                         output_queue.put({
                             'page_num': page_num,  # Номер страницы в PDF
                             'image': np.array(processed)
@@ -180,12 +181,13 @@ class ParserPDF:
 
         def reconstruct_worker(input_queue, output_queue):
             try:
+                parser = ParserPDF()
                 while True:
                     ocr_results = input_queue.get()
                     if ocr_results is None:
                         break
 
-                    text = self.reconstruct_text(ocr_results['results'])
+                    text = parser.reconstruct_text(ocr_results['results'])
                     output_queue.put({
                         'page_num': ocr_results['page_num'],
                         'text': text
