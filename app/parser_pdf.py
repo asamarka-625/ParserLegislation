@@ -1,4 +1,7 @@
 # Внешние зависимости
+import multiprocessing as mp
+# Устанавливаем метод запуска процессов ДО любого импорта torch/cuda
+mp.set_start_method('spawn', force=True)
 import re
 import psutil
 import os
@@ -7,7 +10,6 @@ from typing import Optional, List, Tuple
 import asyncio
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from queue import Empty
-from multiprocessing import Manager
 from PIL import Image
 from pdf2image import convert_from_bytes
 from fake_useragent import UserAgent
@@ -19,6 +21,7 @@ import cv2
 # Внутренние модули
 from app.config import get_config
 from app.models import DataLegislation
+
 
 
 config = get_config()
@@ -38,6 +41,50 @@ def get_memory_usage():
     config.logger.info(f"Всего памяти: {system_memory.total / 1024 / 1024:.2f} MB")
     config.logger.info(f"Использовано: {system_memory.used / 1024 / 1024:.2f} MB")
     config.logger.info(f"Свободно: {system_memory.available / 1024 / 1024:.2f} MB")
+
+
+def preprocess_worker(parser_instance, input_queue, output_queue):
+    try:
+        while True:
+            pdf_bytes = input_queue.get()
+            if pdf_bytes is None:  # Сигнал остановки
+                output_queue.put(None)
+                break
+
+            images = convert_from_bytes(
+                pdf_bytes,
+                dpi=250,  # Снизил DPI для скорости, качество остается хорошим
+                fmt='JPEG',
+                thread_count=4,  # количество потоков
+                use_pdftocairo=True,  # Более быстрый рендерер
+                strict=False
+            )
+            for page_num, image in enumerate(images):
+                processed = parser_instance._fast_optimize_image(image)
+                output_queue.put({
+                    'page_num': page_num,  # Номер страницы в PDF
+                    'image': np.array(processed)
+                })
+    except Exception as e:
+        config.logger.error(f"Ошибка в preprocess_worker: {e}")
+        output_queue.put(None)
+
+
+def reconstruct_worker(parser_instance, input_queue, output_queue):
+    try:
+        while True:
+            ocr_results = input_queue.get()
+            if ocr_results is None:
+                break
+
+            text = parser_instance.reconstruct_text(ocr_results['results'])
+            output_queue.put({
+                'page_num': ocr_results['page_num'],
+                'text': text
+            })
+
+    except Exception as e:
+        config.logger.error(f"Ошибка в reconstruct_worker: {e}")
 
 
 class ParserPDF:
@@ -114,33 +161,6 @@ class ParserPDF:
             self.reader = None
 
     def conveyor_extract_text_from_pdf_bytes(self, data, max_workers: int = 4):
-        def preprocess_worker(input_queue, output_queue):
-            try:
-                parser = ParserPDF()
-                while True:
-                    pdf_bytes = input_queue.get()
-                    if pdf_bytes is None:  # Сигнал остановки
-                        output_queue.put(None)
-                        break
-
-                    images = convert_from_bytes(
-                        pdf_bytes,
-                        dpi=250,  # Снизил DPI для скорости, качество остается хорошим
-                        fmt='JPEG',
-                        thread_count=4,  # количество потоков
-                        use_pdftocairo=True,  # Более быстрый рендерер
-                        strict=False
-                    )
-                    for page_num, image in enumerate(images):
-                        processed = parser._fast_optimize_image(image)
-                        output_queue.put({
-                            'page_num': page_num,  # Номер страницы в PDF
-                            'image': np.array(processed)
-                        })
-            except Exception as e:
-                config.logger.error(f"Ошибка в preprocess_worker: {e}")
-                output_queue.put(None)
-
         def ocr_worker(input_queue, output_queue):
             try:
                 while True:
@@ -179,24 +199,7 @@ class ParserPDF:
                 config.logger.error(f"Ошибка в ocr_worker: {e}")
                 output_queue.put(None)
 
-        def reconstruct_worker(input_queue, output_queue):
-            try:
-                parser = ParserPDF()
-                while True:
-                    ocr_results = input_queue.get()
-                    if ocr_results is None:
-                        break
-
-                    text = parser.reconstruct_text(ocr_results['results'])
-                    output_queue.put({
-                        'page_num': ocr_results['page_num'],
-                        'text': text
-                    })
-
-            except Exception as e:
-                config.logger.error(f"Ошибка в reconstruct_worker: {e}")
-
-        manager = Manager()
+        manager = mp.Manager()
         raw_queue = manager.Queue()
         processed_queue = manager.Queue()
         ocr_queue = manager.Queue()
@@ -204,7 +207,7 @@ class ParserPDF:
 
         # Запускаем воркеры
         with ThreadPoolExecutor(max_workers=max_workers) as thread_executor:
-            with ProcessPoolExecutor(max_workers=max_workers) as process_executor:
+            with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp.get_context('spawn')) as process_executor:
                 # Заполняем начальную очередь
                 for pdf_bytes in data:
                     raw_queue.put(pdf_bytes)
@@ -214,11 +217,11 @@ class ParserPDF:
                     raw_queue.put(None)
 
                 # Запускаем конвейер
-                preprocess_futures = [process_executor.submit(preprocess_worker, raw_queue, processed_queue)
+                preprocess_futures = [process_executor.submit(preprocess_worker, self, raw_queue, processed_queue)
                                       for _ in range(max_workers)]
                 ocr_futures = [thread_executor.submit(ocr_worker, processed_queue, ocr_queue)
                                for _ in range(max_workers)]
-                reconstruct_futures = [process_executor.submit(reconstruct_worker, ocr_queue, result_queue)
+                reconstruct_futures = [process_executor.submit(reconstruct_worker, self, ocr_queue, result_queue)
                                        for _ in range(max_workers)]
 
                 for future in preprocess_futures:
