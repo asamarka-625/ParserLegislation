@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple
 import asyncio
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from queue import Empty
-from multiprocessing import Queue
+from multiprocessing import Manager
 from PIL import Image
 from pdf2image import convert_from_bytes
 from fake_useragent import UserAgent
@@ -126,7 +126,7 @@ class ParserPDF:
                         pdf_bytes,
                         dpi=250,  # Снизил DPI для скорости, качество остается хорошим
                         fmt='JPEG',
-                        thread_count=1,  # количество потоков
+                        thread_count=4,  # количество потоков
                         use_pdftocairo=True,  # Более быстрый рендерер
                         strict=False
                     )
@@ -194,10 +194,11 @@ class ParserPDF:
             except Exception as e:
                 config.logger.error(f"Ошибка в reconstruct_worker: {e}")
 
-        raw_queue = Queue()
-        processed_queue = Queue()
-        ocr_queue = Queue()
-        result_queue = Queue()
+        manager = Manager()
+        raw_queue = manager.Queue()
+        processed_queue = manager.Queue()
+        ocr_queue = manager.Queue()
+        result_queue = manager.Queue()
 
         # Запускаем воркеры
         with ThreadPoolExecutor(max_workers=max_workers) as thread_executor:
@@ -217,6 +218,12 @@ class ParserPDF:
                                for _ in range(max_workers)]
                 reconstruct_futures = [process_executor.submit(reconstruct_worker, ocr_queue, result_queue)
                                        for _ in range(max_workers)]
+
+                for future in preprocess_futures:
+                    future.result()
+
+                for future in ocr_futures:
+                    future.result()
 
                 for future in reconstruct_futures:
                     future.result()
